@@ -5,6 +5,8 @@ node {
     stage 'Clone the project'
     git branch: 'main', credentialsId: '7b99a74c-80b0-424a-a760-259865f53f55', url: 'https://github.com/Benvorth/pushr.git'
 
+    pwd()
+
     dir('spring-jenkins-pipeline') {
         stage("Compilation and Analysis") {
             parallel 'Compilation': {
