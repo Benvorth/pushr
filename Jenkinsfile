@@ -7,10 +7,8 @@ node {
 
     pwd()
 
-    stage("Compilation and Analysis") {
-        parallel 'Compilation': {
-            sh "mvn clean install -DskipTests"
-        }
+    stage("Compilation") {
+        sh "mvn clean install -DskipTests"
     }
 
     stage("Tests and Deployment") {
