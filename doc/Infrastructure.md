@@ -3,14 +3,20 @@
 
 install java 8:
 
-* sudo apt install openjdk-8-jre
+* sudo apt install openjdk-8-jdk
 * sudo update-alternatives --config java
+* sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/bin/java
 
 
 install git:
 
 * sudo apt-get install git-all
 
+install maven:
+
+* sudo apt update
+* sudo apt install maven
+* mvn -version
 
 install Jenkins:
 
@@ -23,4 +29,6 @@ install Jenkins:
 * Get admin-password:
   sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 * Go to http://<ip>:8080
+
+* Default jenkins home-dir: /var/lib/jenkins
 
