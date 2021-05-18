@@ -1,13 +1,10 @@
 #!/usr/bin/env groovy
 
-
 node {
     stage 'Clone the project'
     git branch: 'main', url: 'https://github.com/Benvorth/pushr.git'
 
-    pwd()
-
-    stage("Compilation and Analysis") {
+    stage("Compilation") {
         sh "mvn clean install -DskipTests"
     }
 
