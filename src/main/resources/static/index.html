@@ -21,11 +21,21 @@
 <body class="fullscreen">
     <div class="container">
         <h1 class="title">Hello PUSHr!</h1><br>
-        <h3>Version 0.0.4</h3>
+        <h3>Version 0.0.4</h3><br>
+        <br>
+        <button id="notifications">Request Notifications</button><br>
+        <br>
+
+        <button id="subscribeButton">Subscribe</button><br>
+        <button id="unsubscribeButton" disabled>Unsubscribe</button><br>
+
+        <h4 style="margin-bottom: 0">Random number fact from http://numbersapi.com</h4>
+        <h3 style="margin-top: 0" id="fact"></h3>
+        <h4 style="margin-bottom: 0">Random chuck joke from https://api.icndb.com</h4>
+        <h3  style="margin-top: 0" id="joke"></h3>
     </div>
 
-    <script src="js/main.js"></script><br>
-
-    <button id="notifications">Request Notifications</button>
+    <script src="js/main.js"></script>
+    <script src="js/pushNotify_client.js"></script>
 </body>
 </html>
