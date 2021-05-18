@@ -14,9 +14,8 @@ window.onload = () => {
 }
 
 function randomNotification() {
+    debugger;
     const randomItem = Math.floor(Math.random() * 523);
-    const notifTitle = "Hi There";
-
     new Notification(
         "Random notification: " + randomItem,
         {
