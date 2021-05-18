@@ -9,9 +9,7 @@ window.onload = () => {
     notificationsButton.addEventListener('click', () => {
         // Permission for Notification & Push
         Notification.requestPermission().then((result) => {
-
             if (result !== 'denied') {
-                debugger;
                 randomNotification();
             }
         });
@@ -21,7 +19,6 @@ window.onload = () => {
 }
 
 function randomNotification() {
-    debugger;
     const randomItem = Math.floor(Math.random() * 523);
 
     const options = {
