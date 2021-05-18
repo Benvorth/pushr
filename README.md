@@ -1,6 +1,10 @@
 # pushr
 Rreceive a push-message on your mobile phone by calling a REST-API. Use this eg together with some smart IoT-buttons.
 
+Requirements
+
+* Java 1.8+
+
 Infrastructure
 
 * VM for Backend
@@ -25,4 +29,4 @@ Frontend
 
 License
 
-* Backend: pushService: MIT (thanks @ralscha, https://github.com/ralscha/blog2019/tree/master/webpush)
+* Backend: pushService: MIT (thanks @ralscha, https://github.com/ralscha/blog2019/tree/master/webpush, modified to run with Java 1.8+ instead of 11+)
