@@ -1,10 +1,49 @@
+
+let subscribeButton;
+let unsubscribeButton;
+
+let factOutput;
+let jokeOutput;
+
 window.onload = () => {
     'use strict';
 
+    // cache manager
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw-cache.js');
     }
 
+    // push
+    subscribeButton = document.getElementById('subscribeButton');
+    unsubscribeButton = document.getElementById('unsubscribeButton');
+
+    factOutput = document.getElementById('fact');
+    jokeOutput = document.getElementById('joke');
+
+    if ("serviceWorker" in navigator) {
+        try {
+            checkSubscription();
+            init();
+        } catch (e) {
+            console.error('error init(): ' + e);
+        }
+
+        subscribeButton.addEventListener('click', () => {
+            subscribe().catch(e => {
+                if (Notification.permission === 'denied') {
+                    console.warn('Permission for notifications was denied');
+                } else {
+                    console.error('error subscribe(): ' + e);
+                }
+            });
+        });
+
+        unsubscribeButton.addEventListener('click', () => {
+            unsubscribe().catch(e => console.error('error unsubscribe(): ' + e));
+        });
+    }
+
+    // notifications
     const notificationsButton = document.getElementById("notifications");
     notificationsButton.addEventListener('click', () => {
         // Permission for Notification & Push

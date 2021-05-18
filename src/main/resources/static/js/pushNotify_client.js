@@ -1,31 +1,4 @@
-const subscribeButton = document.getElementById('subscribeButton');
-const unsubscribeButton = document.getElementById('unsubscribeButton');
 
-const factOutput = document.getElementById('fact');
-const jokeOutput = document.getElementById('joke');
-
-if ("serviceWorker" in navigator) {
-    try {
-        checkSubscription();
-        init();
-    } catch (e) {
-        console.error('error init(): ' + e);
-    }
-
-    subscribeButton.addEventListener('click', () => {
-        subscribe().catch(e => {
-            if (Notification.permission === 'denied') {
-                console.warn('Permission for notifications was denied');
-            } else {
-                console.error('error subscribe(): ' + e);
-            }
-        });
-    });
-
-    unsubscribeButton.addEventListener('click', () => {
-        unsubscribe().catch(e => console.error('error unsubscribe(): ' + e));
-    });
-}
 
 
 async function checkSubscription() {
