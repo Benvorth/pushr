@@ -21,7 +21,7 @@ function randomNotification() {
         "Random notification: " + randomItem,
         {
             body: 'Created by Computer',
-            icon: 'img/pushr-128.png'
+            icon: 'img/pushr-24.png'
         }
     );
     setTimeout(randomNotification, 30000);

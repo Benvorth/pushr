@@ -8,6 +8,31 @@
       "type": "image/png"
     },
     {
+      "src": "img/pushr-24.png",
+      "sizes": "24x24",
+      "type": "image/png"
+    },
+    {
+      "src": "img/pushr-36.png",
+      "sizes": "36x36",
+      "type": "image/png"
+    },
+    {
+      "src": "img/pushr-48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "img/pushr-72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "img/pushr-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
       "src": "img/pushr-128.png",
       "sizes": "128x128",
       "type": "image/png"
