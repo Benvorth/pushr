@@ -12,7 +12,8 @@
 	<artifactId>pushr</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>pushr</name>
-	<description>Rreceive a push-message on your mobile phone by calling a REST-API. Use this eg together with some smart IoT-buttons.</description>
+	<description>Receive a push-message on your mobile phone by calling a REST-API. Use this eg together with some smart IoT-buttons.</description>
+
 	<properties>
 		<java.version>1.8</java.version>
 	</properties>

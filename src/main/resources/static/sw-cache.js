@@ -1,6 +1,6 @@
 /* This service worker manages the device-local cache */
 
-let cacheName = 'PUSHr-v4';
+let cacheName = 'PUSHr-v5';
 let filesToCache = [
     '/', /* so browser caches index.html even if user didn't directly type in that */
     '/index.html',
@@ -17,7 +17,8 @@ let filesToCache = [
     '/img/pushr-192.png',
     '/img/pushr-256.png',
     '/img/pushr-512.png',
-    '/js/main.js'
+    '/js/main.js',
+    '/js/pushNotify_client.js'
 ];
 
 /* Start the service worker and cache all of the app's content */

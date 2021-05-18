@@ -20,7 +20,7 @@ window.onload = () => {
     factOutput = document.getElementById('fact');
     jokeOutput = document.getElementById('joke');
 
-    if ("serviceWorker" in navigator) {
+    if ('serviceWorker' in navigator) {
         try {
             checkSubscription();
             init();
