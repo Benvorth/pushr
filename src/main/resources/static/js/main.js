@@ -5,16 +5,21 @@ window.onload = () => {
         navigator.serviceWorker.register('./sw-cache.js');
     }
 
-    // Permission for Notification & Push
-    Notification.requestPermission().then((result) => {
-        if (result === 'granted') {
-            randomNotification();
-        }
+    const notificationsButton = document.getElementById("notifications");
+    notificationsButton.addEventListener('click', () => {
+        // Permission for Notification & Push
+        Notification.requestPermission().then((result) => {
+            if (result === 'granted') {
+                randomNotification();
+            }
+        });
     });
+
+
 }
 
 function randomNotification() {
-    debugger;
+
     const randomItem = Math.floor(Math.random() * 523);
     new Notification(
         "Random notification: " + randomItem,
