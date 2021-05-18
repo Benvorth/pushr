@@ -1,10 +1,11 @@
 /* This service worker manages the device-local cache */
 
-let cacheName = 'PUSHr-v3';
+let cacheName = 'PUSHr-v4';
 let filesToCache = [
     '/', /* so browser caches index.html even if user didn't directly type in that */
     '/index.html',
     '/css/style.css',
+    '/img/pushr-16.png',
     '/img/pushr-24.png',
     '/img/pushr-36.png',
     '/img/pushr-48.png',
