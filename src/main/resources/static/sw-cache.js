@@ -1,6 +1,6 @@
 /* This service worker manages the device-local cache */
 
-let cacheName = 'PUSHr-v2';
+let cacheName = 'PUSHr-v3';
 let filesToCache = [
     '/', /* so browser caches index.html even if user didn't directly type in that */
     '/index.html',

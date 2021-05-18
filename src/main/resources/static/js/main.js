@@ -9,7 +9,7 @@ window.onload = () => {
     notificationsButton.addEventListener('click', () => {
         // Permission for Notification & Push
         Notification.requestPermission().then((result) => {
-            if (result === 'granted') {
+            if (result !== 'denied') {
                 randomNotification();
             }
         });
