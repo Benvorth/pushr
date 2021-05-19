@@ -1,5 +1,16 @@
 body {
     font-family: sans-serif;
+    background-color: black;
+    color: white
+    /*  */
+}
+
+.lightBlue {
+    color: #8FAADC
+}
+
+.darkBlue {
+    color: #2F5597
 }
 
 /* Make content area fill the entire browser window */

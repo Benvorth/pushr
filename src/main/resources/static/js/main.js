@@ -96,6 +96,11 @@ function onSignIn(googleUser) {
     console.log('Name: ' + profile.getName());
     console.log('Image URL: ' + profile.getImageUrl());
     console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+
+    // user token for backend:
+    const id_token = googleUser.getAuthResponse().id_token;
+    console.log('ID token: ' + id_token);
+
 }
 
 function signOut() {
