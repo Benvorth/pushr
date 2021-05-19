@@ -1,5 +1,5 @@
 
-
+let publicSigningKey;
 
 async function checkSubscription() {
     const registration = await navigator.serviceWorker.ready;

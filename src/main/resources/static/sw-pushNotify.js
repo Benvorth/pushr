@@ -25,7 +25,7 @@ async function handlePushEvent(event) {
             });
         }
 
-        const response = await fetch('lastNumbersAPIFact');
+        const response = await fetch('/api/lastNumbersAPIFact');
         const fact = await response.text();
 
         await dataCache.put('fact', new Response(fact));

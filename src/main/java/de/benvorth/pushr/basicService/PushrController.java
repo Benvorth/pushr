@@ -1,4 +1,4 @@
-package de.benvorth.pushr;
+package de.benvorth.pushr.basicService;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
