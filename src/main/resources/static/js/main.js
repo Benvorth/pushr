@@ -2,6 +2,7 @@
 let subscribeButton;
 let unsubscribeButton;
 
+let subscribeStatusLog;
 let factOutput;
 let jokeOutput;
 
@@ -14,6 +15,7 @@ window.onload = () => {
     }
 
     // push
+    subscribeStatusLog = document.getElementById('subscribeStatusLog');
     subscribeButton = document.getElementById('subscribeButton');
     unsubscribeButton = document.getElementById('unsubscribeButton');
 
@@ -29,6 +31,16 @@ window.onload = () => {
         }
 
         subscribeButton.addEventListener('click', () => {
+
+            Notification.requestPermission().then((result) => {
+                if (result === 'granted') {
+                    subscribe().catch(e => {console.error('error subscribe(): ' + e);});
+                } else {
+                    console.warn('Permission for notifications was denied');
+                }
+            });
+
+            /*
             subscribe().catch(e => {
                 if (Notification.permission === 'denied') {
                     console.warn('Permission for notifications was denied');
@@ -36,6 +48,8 @@ window.onload = () => {
                     console.error('error subscribe(): ' + e);
                 }
             });
+            */
+
         });
 
         unsubscribeButton.addEventListener('click', () => {

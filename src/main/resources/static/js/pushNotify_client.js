@@ -89,7 +89,8 @@ async function subscribe() {
         applicationServerKey: this.publicSigningKey
     });
 
-    console.info(`Subscribed to Push Service: ${subscription.endpoint}`);
+    console.info('Subscribed to Push Service: ' + subscription.endpoint);
+    subscribeStatusLog.innterText += 'Subscribed to Push Service: ' + subscription.endpoint;
 
     await fetch("/api/subscribe", {
         method: 'POST',
@@ -100,6 +101,7 @@ async function subscribe() {
     });
 
     console.info('Subscription info sent to the server');
+    subscribeStatusLog.innterText += 'Subscription info sent to the server';
 
     subscribeButton.disabled = true;
     unsubscribeButton.disabled = false;
