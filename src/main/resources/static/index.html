@@ -17,11 +17,17 @@
     <!-- <meta name="msapplication-TileImage" content="img/pushr-144.png" /> -->
     <meta name="msapplication-TileColor" content="#FFFFFF" />
 
+    <meta name="google-signin-client_id" content="217519645658-9ink26e7bn8q4p59k7799kvi9qdqtghe.apps.googleusercontent.com">
+
 </head>
 <body class="fullscreen">
     <div class="container">
         <h1 class="title">Hello PUSHr!</h1><br>
         <h3>Version 0.0.4</h3><br>
+        <br>
+        <div class="g-signin2" data-onsuccess="onSignIn"></div><br>
+        <br>
+        <a href="#" onclick="signOut();">Sign out</a>
         <br>
         <button id="notifications">Request Notifications</button><br>
         <br>
@@ -38,6 +44,7 @@
         <h3  style="margin-top: 0" id="joke"></h3>
     </div>
 
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
     <script src="js/main.js"></script>
     <script src="js/pushNotify_client.js"></script>
 </body>

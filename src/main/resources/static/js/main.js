@@ -1,4 +1,3 @@
-
 let subscribeButton;
 let unsubscribeButton;
 
@@ -35,7 +34,9 @@ window.onload = () => {
             Notification.requestPermission().then((result) => {
                 debugger;
                 if (result === 'granted') {
-                    subscribe().catch(e => {console.error('error subscribe(): ' + e);});
+                    subscribe().catch(e => {
+                        console.error('error subscribe(): ' + e);
+                    });
                 } else {
                     console.warn('Permission for notifications was denied');
                 }
@@ -85,4 +86,21 @@ function randomNotification() {
         options
     );
     setTimeout(randomNotification, 30000);
+}
+
+
+function onSignIn(googleUser) {
+    let profile = googleUser.getBasicProfile();
+    debugger;
+    console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+    console.log('Name: ' + profile.getName());
+    console.log('Image URL: ' + profile.getImageUrl());
+    console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+}
+
+function signOut() {
+    let auth2 = gapi.auth2.getAuthInstance();
+    auth2.signOut().then(function () {
+        console.log('User signed out.');
+    });
 }
