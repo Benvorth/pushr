@@ -33,6 +33,7 @@ window.onload = () => {
         subscribeButton.addEventListener('click', () => {
 
             Notification.requestPermission().then((result) => {
+                debugger;
                 if (result === 'granted') {
                     subscribe().catch(e => {console.error('error subscribe(): ' + e);});
                 } else {
