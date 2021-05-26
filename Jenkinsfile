@@ -1,6 +1,11 @@
 #!/usr/bin/env groovy
 
 node {
+    stage("Stop running instance") {
+        sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
+        cleanWs()
+    }
+
 
     dir('pushr-fe') {
 
@@ -14,9 +19,7 @@ node {
         }
     }
 
-    stage("Stop running instance") {
-        sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
-    }
+
 
     stage ('Clone the backend') {
         git branch: 'main', url: 'https://github.com/Benvorth/pushr.git'
@@ -24,12 +27,12 @@ node {
 
     stage('Merge frontend and backend') {
         // sh 'chown -R root:jenkins src/main/resources/static'
-        sh 'sudo rm -r src/main/resources/static'
-        sh 'sudo /bin/cp -rf pushr-fe/build/* src/main/resources/static'
+        sh 'rm -r src/main/resources/static'
+        sh 'cp -rf pushr-fe/build/* src/main/resources/static'
     }
 
     stage("Build the backend") {
-        sh "mvn clean install -DskipTests"
+        sh 'mvn clean install -DskipTests'
     }
 
 
