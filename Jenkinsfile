@@ -14,10 +14,15 @@ node {
         }
     }
 
+    stage("Stop running instance") {
+        sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
+    }
 
     stage ('Clone the backend') {
         git branch: 'main', url: 'https://github.com/Benvorth/pushr.git'
     }
+
+
 
     stage('Merge frontend and backend') {
         sh 'cp -r pushr-fe/build/ src/main/resources/static'
@@ -27,9 +32,7 @@ node {
         sh "mvn clean install -DskipTests"
     }
 
-    stage("Stop running instance") {
-        sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
-    }
+
 
     stage("Deploy new version") {
         withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
