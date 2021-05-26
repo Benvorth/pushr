@@ -22,9 +22,8 @@ node {
         git branch: 'main', url: 'https://github.com/Benvorth/pushr.git'
     }
 
-
-
     stage('Merge frontend and backend') {
+        sh 'rm -r src/main/resources/static'
         sh 'cp -r pushr-fe/build/ src/main/resources/static'
     }
 
