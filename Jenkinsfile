@@ -2,8 +2,9 @@
 
 node {
     stage("Stop server and clean workspace") {
+        sh "chmod -R 777 ."
         sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
-        sh 'rm -r *'
+        sh 'rm -rf *'
     }
 
 
