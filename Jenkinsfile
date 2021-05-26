@@ -10,7 +10,7 @@ node {
 
         stage('Build the frontend') {
             sh "npm install"
-            sh "npm run package"
+            sh "npm run build"
         }
     }
 
