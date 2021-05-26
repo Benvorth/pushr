@@ -3,7 +3,7 @@
 node {
     stage("Stop running instance") {
         sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
-        cleanWs()
+        sh 'rm -r *'
     }
 
 
