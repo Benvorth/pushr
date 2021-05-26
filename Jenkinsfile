@@ -9,8 +9,8 @@ node {
         }
 
         stage('Build the frontend') {
-            sh "npm install"
-            sh "npm run build"
+            sh 'npm install'
+            sh 'npm run build'
         }
     }
 
@@ -23,7 +23,8 @@ node {
     }
 
     stage('Merge frontend and backend') {
-
+        sh 'chown -R root:jenkins src/main/resources/static'
+        sh 'rm -r src/main/resources/static'
         sh '/bin/cp -rf pushr-fe/build/* src/main/resources/static'
     }
 
