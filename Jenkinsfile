@@ -24,7 +24,7 @@ node {
 
     stage('Merge frontend and backend') {
 
-        sh '/bin/cp -rf pushr-fe/build/ src/main/resources/static'
+        sh '/bin/cp -rf pushr-fe/build/* src/main/resources/static'
     }
 
     stage("Build the backend") {
