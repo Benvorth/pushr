@@ -26,14 +26,12 @@ node {
     }
 
     stage('Merge frontend and backend') {
-        sh 'cp -rf pushr-fe/build/* src/main/resources/static'
+        sh 'cp -rf pushr-fe/build src/main/resources/static'
     }
 
     stage("Build the backend") {
         sh 'mvn clean install -DskipTests'
     }
-
-
 
     stage("Deploy new version") {
         withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
