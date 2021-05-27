@@ -87,9 +87,8 @@ public class PushController {
     @ResponseStatus(HttpStatus.CREATED)
     public String claimToken(
         @RequestParam(name="token", required = true) String token,
-        @RequestParam(name="subscriptionId", required = true) String subscriptionId
+        @RequestBody Subscription subscription
     ) {
-        Subscription subscription = this.subscriptionsById.get(subscriptionId);
         tokenToSubscriptionId.put(token, subscription);
         return "{\"result\":\"Token claimed\"}";
     }
