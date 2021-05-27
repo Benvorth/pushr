@@ -13,4 +13,8 @@ public class Html5PathsController {
     public String redirect() {
         return "forward:/index.html";
     }
+    @RequestMapping(value = "/token/{[path:[^\\.]*}")
+    public String redirectToken() {
+        return "forward:/index.html";
+    }
 }
