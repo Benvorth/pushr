@@ -42,7 +42,8 @@ public class PushController {
     private final ObjectMapper objectMapper;
 
     private final Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
-    private final Map<String, Subscription> subscriptionsAngular = new ConcurrentHashMap<>();
+    private final Map<String, Subscription> subscriptionsById = new ConcurrentHashMap<>();
+    private final Map<String, Subscription> tokenToSubscriptionId = new ConcurrentHashMap<>();
     private String lastNumbersAPIFact = "";
 
     private final ServerKeys serverKeys;
@@ -78,7 +79,86 @@ public class PushController {
     public String subscribe(@RequestBody Subscription subscription) {
         this.subscriptions.put(subscription.getEndpoint(), subscription);
         String subscriptionId = createHash(subscription);
+        this.subscriptionsById.put(subscriptionId, subscription);
         return "{\"subscriptionId\":\"" + subscriptionId + "\"}";
+    }
+
+    @PostMapping(path = "/claimToken")
+    @ResponseStatus(HttpStatus.CREATED)
+    public String claimToken(
+        @RequestParam(name="token", required = true) String token,
+        @RequestParam(name="subscriptionId", required = true) String subscriptionId
+    ) {
+        Subscription subscription = this.subscriptionsById.get(subscriptionId);
+        tokenToSubscriptionId.put(token, subscription);
+        return "{\"result\":\"Token claimed\"}";
+    }
+
+    @RequestMapping(
+        path = "/push",
+        method = RequestMethod.GET
+    )
+    public String push(
+        @RequestParam(name="token", required = true) String token,
+        @RequestParam(name="bat", required = false) String bat, // Batteriespannung
+        @RequestParam(name="per", required = false) String per, // Batteriekapazität in %
+        @RequestParam(name="mac", required = false) String mac, // MAC Adresse des Buttons (WiFi)
+        @RequestParam(name="bssid", required = false) String bssid, // MAC Adresse des WiFi Access Points
+        @RequestParam(name="ssid", required = false) String ssid, // SSID des WiFi Access Points
+        @RequestParam(name="psk", required = false) String psk, // Pass Key des WiFi Access Points
+        @RequestParam(name="blm", required = false) String blm, // MAC Adresse des stärksten iBeacons
+        @RequestParam(name="blu", required = false) String blu, // UUID Kennung des stärksten iBeacons
+        @RequestParam(name="blv", required = false) String blv, // Batterie Spannung des stärksten iBeacons (TLM Paket aktiv)
+        @RequestParam(name="cpu", required = false) String cpu, // Counter Push
+        @RequestParam(name="cap", required = false) String cap, //  Counter AP
+        @RequestParam(name="cst", required = false) String cst, // Counter STA
+        @RequestParam(name="cwp", required = false) String cwp, // Counter WPS
+        @RequestParam(name="swver", required = false) String swver, // SW-version
+        @RequestParam(name="hwver", required = false) String hwver // HW-version
+    ) {
+        PushrApplication.logger.info(
+            "++++received push: \n" +
+                "    token {}\n" +
+                "    Batteriespannung {}\n" +
+                "    Batteriekapazität in % {}\n" +
+                "    MAC Adresse des Buttons (WiFi) {}\n" +
+                "    MAC Adresse des WiFi Access Points {}\n" +
+                "    SSID des WiFi Access Points {}\n" +
+                "    Pass Key des WiFi Access Points {}\n" +
+                "    MAC Adresse des stärksten iBeacons {}\n" +
+                "    UUID Kennung des stärksten iBeacons {}\n" +
+                "    Batterie Spannung des stärksten iBeacons {}\n" +
+                "    Counter Push {}\n" +
+                "    Counter AP {}\n" +
+                "    Counter STA {}\n" +
+                "    Counter WPS {}\n" +
+                "    SW-version {}\n" +
+                "    HW-version {}",
+
+            token,
+            (bat != null ? bat : "null"),
+            (per != null ? per : "null"),
+            (mac != null ? mac : "null"),
+            (bssid != null ? bssid : "null"),
+            (ssid != null ? ssid : "null"),
+            (psk != null ? psk : "null"),
+            (blm != null ? blm : "null"),
+            (blu != null ? blu : "null"),
+            (blv != null ? blv : "null"),
+            (cpu != null ? cpu : "null"),
+            (cap != null ? cap : "null"),
+            (cst != null ? cst : "null"),
+            (cwp != null ? cwp : "null"),
+            (swver != null ? swver : "null"),
+            (hwver != null ? hwver : "null")
+        );
+
+        if (tokenToSubscriptionId.containsKey(token)) {
+            Subscription subscription = this.subscriptionsById.get(tokenToSubscriptionId.get(token));
+            this.sendTextPushMessage(subscription, new PushMessage("Text Notification", "Hi from token " + token));
+        }
+
+        return "done";
     }
 
     private String createHash(Subscription subscription) {
@@ -108,37 +188,15 @@ public class PushController {
     }
 
     // @CrossOrigin(origins = "http://localhost:3000")
-    @PostMapping("/subscribeAngular")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void subscribeAngular(@RequestBody Subscription subscription) {
-        System.out.println("subscribe: " + subscription);
-        this.subscriptionsAngular.put(subscription.getEndpoint(), subscription);
-    }
-
-    // @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/unsubscribe")
     public void unsubscribe(@RequestBody SubscriptionEndpoint subscription) {
         this.subscriptions.remove(subscription.getEndpoint());
     }
 
     // @CrossOrigin(origins = "http://localhost:3000")
-    @PostMapping("/unsubscribeAngular")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void unsubscribeAngular(@RequestBody SubscriptionEndpoint subscription) {
-        System.out.println("unsubscribe: " + subscription);
-        this.subscriptionsAngular.remove(subscription.getEndpoint());
-    }
-
-    // @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/isSubscribed")
     public boolean isSubscribed(@RequestBody SubscriptionEndpoint subscription) {
         return this.subscriptions.containsKey(subscription.getEndpoint());
-    }
-
-    // @CrossOrigin(origins = "http://localhost:3000")
-    @PostMapping("/isSubscribedAngular")
-    public boolean isSubscribedAngular(@RequestBody SubscriptionEndpoint subscription) {
-        return this.subscriptionsAngular.containsKey(subscription.getEndpoint());
     }
 
     // @CrossOrigin(origins = "http://localhost:3000")
@@ -190,7 +248,7 @@ public class PushController {
 
     // @Scheduled(fixedDelay = 30_000)
     public void chuckNorrisJoke() {
-        if (this.subscriptions.isEmpty() && this.subscriptionsAngular.isEmpty()) {
+        if (this.subscriptions.isEmpty()) {
             return;
         }
 
@@ -221,8 +279,10 @@ public class PushController {
             Map<String, Notification> singletonMap = new HashMap<>();
             singletonMap.put("notification", notification);
 
+            /*
             sendPushMessageToAllSubscribers(this.subscriptionsAngular,
                 singletonMap);
+             */
         } else {
             PushrApplication.logger.error("fetch chuck norris {}", response.toString());
         }
