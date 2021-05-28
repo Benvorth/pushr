@@ -43,7 +43,7 @@ public class PushController {
 
     private final Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
     private final Map<String, Subscription> subscriptionsById = new ConcurrentHashMap<>();
-    private final Map<String, Subscription> tokenToSubscriptionId = new ConcurrentHashMap<>();
+    private final Map<String, Subscription> tokenToSubscription = new ConcurrentHashMap<>();
     private String lastNumbersAPIFact = "";
 
     private final ServerKeys serverKeys;
@@ -86,11 +86,18 @@ public class PushController {
     @PostMapping(path = "/claimToken")
     @ResponseStatus(HttpStatus.CREATED)
     public String claimToken(
-        @RequestParam(name="token", required = true) String token,
-        @RequestBody Subscription subscription
+        @RequestParam("token") String token,
+        @RequestParam("subscriptionEndpoint") String subscriptionEndpoint
+        // @RequestBody Subscription subscription
     ) {
-        tokenToSubscriptionId.put(token, subscription);
-        return "{\"result\":\"Token claimed\"}";
+        Subscription subscription = this.getSubscriptionByEndpoint(subscriptionEndpoint);
+        if (subscription != null) {
+            tokenToSubscription.put(token, subscription);
+            // return this.sendTextPushMessage(subscription, new PushMessage("Text Notification", message));
+            return "{\"result\":\"Token claimed\"}";
+        }
+        // tokenToSubscriptionId.put(token, subscription);
+        return "{\"result\":\"Token not claimed\"}";
     }
 
     @RequestMapping(
@@ -152,8 +159,8 @@ public class PushController {
             (hwver != null ? hwver : "null")
         );
 
-        if (tokenToSubscriptionId.containsKey(token)) {
-            Subscription subscription = this.subscriptionsById.get(tokenToSubscriptionId.get(token));
+        if (tokenToSubscription.containsKey(token)) {
+            Subscription subscription = this.tokenToSubscription.get(token);
             this.sendTextPushMessage(subscription, new PushMessage("Text Notification", "Hi from token " + token));
         }
 
