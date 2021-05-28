@@ -226,7 +226,7 @@ public class PushController {
         }
     }
 
-    @Scheduled(fixedDelay = 20_000)
+    // @Scheduled(fixedDelay = 20_000)
     public void numberFact() {
         if (this.subscriptions.isEmpty()) {
             return;
