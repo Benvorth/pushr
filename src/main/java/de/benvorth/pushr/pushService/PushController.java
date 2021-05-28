@@ -61,19 +61,19 @@ public class PushController {
             this.serverKeys.getPrivateKey());
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(path = "/publicSigningKey", produces = "application/octet-stream")
     public byte[] publicSigningKey() {
         return this.serverKeys.getPublicKeyUncompressed();
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(path = "/publicSigningKeyBase64")
     public String publicSigningKeyBase64() {
         return this.serverKeys.getPublicKeyBase64();
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/subscribe")
     @ResponseStatus(HttpStatus.CREATED)
     public String subscribe(@RequestBody Subscription subscription) {
@@ -83,6 +83,7 @@ public class PushController {
         return "{\"subscriptionId\":\"" + subscriptionId + "\"}";
     }
 
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping(path = "/claimToken")
     @ResponseStatus(HttpStatus.CREATED)
     public String claimToken(
@@ -93,13 +94,16 @@ public class PushController {
         Subscription subscription = this.getSubscriptionByEndpoint(subscriptionEndpoint);
         if (subscription != null) {
             tokenToSubscription.put(token, subscription);
+            PushrApplication.logger.info("Token {} claimed successfully", token);
             // return this.sendTextPushMessage(subscription, new PushMessage("Text Notification", message));
             return "{\"result\":\"Token claimed\"}";
         }
+        PushrApplication.logger.info("Cant claim token {}: No subscriptionEndpoint provided", token);
         // tokenToSubscriptionId.put(token, subscription);
         return "{\"result\":\"Token not claimed\"}";
     }
 
+    @CrossOrigin(origins = "http://localhost:3000")
     @RequestMapping(
         path = "/push",
         method = RequestMethod.GET
@@ -193,25 +197,25 @@ public class PushController {
         return hashtext;
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/unsubscribe")
     public void unsubscribe(@RequestBody SubscriptionEndpoint subscription) {
         this.subscriptions.remove(subscription.getEndpoint());
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/isSubscribed")
     public boolean isSubscribed(@RequestBody SubscriptionEndpoint subscription) {
         return this.subscriptions.containsKey(subscription.getEndpoint());
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @GetMapping(path = "/lastNumbersAPIFact")
     public String lastNumbersAPIFact() {
         return this.lastNumbersAPIFact;
     }
 
-    // @CrossOrigin(origins = "http://localhost:3000")
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/sendTextNotification")
     public boolean sendTextNotification(
         @RequestParam("subscriptionEndpoint") String subscriptionEndpoint,
