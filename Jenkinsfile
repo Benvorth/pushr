@@ -1,5 +1,10 @@
 #!/usr/bin/env groovy
 
+environment {
+    MARIADB_USER        = credentials('MARIADB_USER')
+    MARIADB_PASSWORD    = credentials('MARIADB_PASSWORD')
+}
+
 node {
     stage("Stop server and clean workspace") {
         sh "chmod -R 777 ."
@@ -31,12 +36,12 @@ node {
     }
 
     stage("Build the backend") {
-        sh 'mvn clean install -DskipTests'
+        sh 'mvn clean install -DskipTests -Dspring.profiles.active=prod'
     }
 
     stage("Deploy new version") {
         withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
-            sh 'nohup mvn spring-boot:run -Dserver.port=8081 &'
+            sh 'nohup mvn spring-boot:run -Dspring.profiles.active=prod -Dserver.port=8081 &'
         }
 
     }
