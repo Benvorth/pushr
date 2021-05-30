@@ -75,7 +75,7 @@ public class UserController {
                     userId, email, emailVerified, name, pictureUrl, locale, familyName, givenName
                 );
 
-                List<User> userData = userRepository.findByUser_id(userId);
+                List<User> userData = userRepository.findByUserId(userId);
 
                 User user;
                 if (userData != null && userData.size() > 0) {
@@ -91,7 +91,7 @@ public class UserController {
                     user = new User();
                 }
 
-                user.setUser_id(userId);
+                user.setUserId(userId);
                 user.setId_provider(UserIdProvider.ID_PROVIDER_GOOGLE);
                 user.setName(name);
                 user.setAvatar_url(pictureUrl);
