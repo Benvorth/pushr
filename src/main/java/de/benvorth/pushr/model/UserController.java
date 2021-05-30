@@ -94,7 +94,7 @@ public class UserController {
                 user.setUserId(userId);
                 user.setId_provider(UserIdProvider.ID_PROVIDER_GOOGLE);
                 user.setName(name);
-                user.setAvatar_url(pictureUrl);
+                user.setAvatarUrl(pictureUrl);
                 User savedElement = userRepository.save(user);
                 return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
                 // Use or store profile information
