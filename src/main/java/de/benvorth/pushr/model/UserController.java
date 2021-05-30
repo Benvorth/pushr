@@ -75,41 +75,46 @@ public class UserController {
                     userId, email, emailVerified, name, pictureUrl, locale, familyName, givenName
                 );
 
+                List<User> userData = userRepository.findByUser_id(userId);
+
+                User user;
+                if (userData != null && userData.size() > 0) {
+
+                    if (userData.size() > 1) {
+                        return new ResponseEntity<>(
+                            "{\"result\":\"error\",\"msg\":\"more than one user found for provided token\"}",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                        );
+                    }
+                    user = userData.get(0);
+                } else {
+                    user = new User();
+                }
+
+                user.setUser_id(userId);
+                user.setId_provider(UserIdProvider.ID_PROVIDER_GOOGLE);
+                user.setName(name);
+                user.setAvatar_url(pictureUrl);
+                User savedElement = userRepository.save(user);
+                return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
                 // Use or store profile information
                 // ...
 
             } else {
                 PushrApplication.logger.info("Provided ID token '{}' is not a valid google token", idTokenString);
-                return new ResponseEntity<>("{\"result\":\"error\",\"msg\":\"Provided ID token is not a valid google token\"}", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(
+                    "{\"result\":\"error\",\"msg\":\"Provided ID token is not a valid google token\"}",
+                    HttpStatus.BAD_REQUEST
+                );
             }
 
         } catch (GeneralSecurityException | IOException e) {
-            e.printStackTrace();
+            PushrApplication.logger.error("Error while parsing the provided google token", e);
+            return new ResponseEntity<>(
+                "{\"result\":\"error\",\"msg\":\"Error while parsing the provided google token\"}",
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
-
-        return new ResponseEntity<>("{\"result\":\"success\",\"msg\":\"user saved/updated successfully\"}", HttpStatus.OK);
-
-        /*
-        List<User> userData = userRepository.findByToken(providedUser.getUserToken());
-
-        if (userData != null && userData.size() > 0) {
-
-            if (userData.size() > 1) {
-                return new ResponseEntity<>("{\"result\":\"error\",\"msg\":\"more than one user found for provided token\"}", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            User user = userData.get(0);
-            user.setIdProvider(providedUser.getIdProvider());
-            user.setName(providedUser.getName());
-            user.setUserToken(providedUser.getUserToken());
-            user.setAvatarUrl(providedUser.getAvatarUrl());
-            User savedElement = userRepository.save(user);
-            return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
-        } else {
-            User savedElement = userRepository.save(providedUser);
-            return new ResponseEntity<>(savedElement.toJson(), HttpStatus.CREATED);
-        }
-         */
     }
 
 
