@@ -42,7 +42,7 @@ node {
                 MARIADB_PASSWORD    = credentials('MARIADB_PASSWORD')
             }
 
-            sh 'nohup mvn -Dspring.profiles.active=prod -Dserver.port=8081 -Dspring.datasource.username=root -Dspring.datasource.password=$MARIADB_PASSWORD spring-boot:run &'
+            sh 'nohup mvn -Dspring.profiles.active=prod -Dserver.port=8081 spring-boot:run &'
         }
 
     }
