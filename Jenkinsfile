@@ -41,7 +41,7 @@ node {
 
     stage("Deploy new version") {
         withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
-            sh 'nohup mvn spring-boot:run -Dspring.profiles.active=prod -Dserver.port=8081 &'
+            sh 'nohup mvn -Dspring.profiles.active=e1 -Dserver.port=8081 spring-boot:run &'
         }
 
     }
