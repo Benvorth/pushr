@@ -3,6 +3,8 @@
 pipeline {
     agent any
 
+    options {skipDefaultCheckout()}
+
     environment {
         MARIADB_USER = credentials('MARIADB_USER')
         MARIADB_PASSWORD = credentials('MARIADB_PASSWORD')
@@ -29,7 +31,7 @@ pipeline {
         stage('Build the frontend') {
             steps {
                 dir('pushr-fe') {
-                    sh 'npm install'
+                    sh 'pnpm install'
                     sh 'npm run build'
                 }
             }

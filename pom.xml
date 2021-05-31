@@ -103,13 +103,13 @@
 
 	<build>
 		<finalName>pushr</finalName> <!-- final name for war-file -->
-		<!-- Activate ressource filtering (for profiles)
+		<!-- Activate ressource filtering (for profiles)-->
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
 			</resource>
-		</resources> -->
+		</resources>
 
 		<plugins>
 			<plugin>
