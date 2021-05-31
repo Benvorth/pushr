@@ -6,6 +6,7 @@ pipeline {
     environment {
         MARIADB_USER = credentials('MARIADB_USER')
         MARIADB_PASSWORD = credentials('MARIADB_PASSWORD')
+        JENKINS_NODE_COOKIE = 'dontkill'
     }
 
     stages {
@@ -55,9 +56,9 @@ pipeline {
 
         stage("Deploy new version") {
             steps {
-                withEnv(['PATH+JENKINS_NODE_COOKIE=dontkill']) {
-                    sh 'nohup mvn -Dspring.profiles.active=prod -Dserver.port=8081 spring-boot:run &'
-                }
+
+                sh 'nohup mvn -Dspring.profiles.active=prod -Dserver.port=8081 spring-boot:run &'
+
             }
         }
     }
