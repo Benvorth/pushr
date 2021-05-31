@@ -18,6 +18,15 @@ install maven:
 * sudo apt install maven
 * mvn -version
 
+install mariaDB
+
+* sudo apt update
+* sudo apt install mariadb-server
+* mariadb will start automatically: 
+  sudo systemctl status mariadb
+* sudo mysql_secure_installation
+  (Set root password, Remove anonymous users, Disallow root login remotely, Remove test database and access to it, Reload privilege tables)
+
 install Jenkins:
 
 * wget --no-check-certificate -vO - https://pkg.jenkins.io/debian-stable/jenkins.io.key |sudo apt-key add -

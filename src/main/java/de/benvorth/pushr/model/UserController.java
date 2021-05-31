@@ -96,6 +96,10 @@ public class UserController {
                 user.setName(name);
                 user.setAvatarUrl(pictureUrl);
                 User savedElement = userRepository.save(user);
+
+                User u = userRepository.findByUserId(userId).get(0);
+                PushrApplication.logger.info("Found user {} in database", u.getUserId());
+
                 return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
                 // Use or store profile information
                 // ...
