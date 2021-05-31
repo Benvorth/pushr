@@ -38,11 +38,11 @@ node {
     stage("Deploy new version") {
         withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
             environment {
-                MARIADB_USER        = 'root'
+                MARIADB_USER        = credentials('MARIADB_USER')
                 MARIADB_PASSWORD    = credentials('MARIADB_PASSWORD')
             }
 
-            sh 'nohup mvn -Dspring.profiles.active=prod -Dspring.datasource.username=${MARIADB_USER} -Dspring.datasource.password=${MARIADB_PASSWORD} -Dserver.port=8081 spring-boot:run &'
+            sh 'nohup mvn -Dspring.profiles.active=prod -Dspring.datasource.username=root -Dspring.datasource.password=${MARIADB_PASSWORD} -Dserver.port=8081 spring-boot:run &'
         }
 
     }
