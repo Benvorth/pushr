@@ -17,25 +17,30 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id; // will be set when persisting
 
-    private String userId;
+    private String user_id;
     private String id_provider;
     private String name;
-    private String avatarUrl;
+    private String avatar_url;
+    private long first_login;
+    private long last_seen;
 
-    public User (String userId, String id_provider, String name, String avatarUrl) {
-        this.userId = userId;
+    public User (String user_id, String id_provider, String name, String avatar_url) {
+        this.user_id = user_id;
         this.id_provider = id_provider;
         this.name = name;
-        this.avatarUrl = avatarUrl;
+        this.avatar_url = avatar_url;
+        long now = System.currentTimeMillis();
+        this.first_login = now;
+        this.last_seen = now;
     }
 
     public String toJson () {
         return "{" +
             "\"id\":" + this.id + "," +
-            "\"userId\":\"" + this.userId + "\"," +
-            "\"idProvider\":\"" + this.id_provider + "\"," +
+            "\"user_id\":\"" + this.user_id + "\"," +
+            "\"id_provider\":\"" + this.id_provider + "\"," +
             "\"name\":\"" + this.name + "\"," +
-            "\"avatarUrl\":\"" + this.avatarUrl + "\"" +
+            "\"avatar_url\":\"" + this.avatar_url + "\"" +
             "}";
     }
 

@@ -75,11 +75,11 @@ public class UserController {
                     userId, email, emailVerified, name, pictureUrl, locale, familyName, givenName
                 );
 
-                List<User> userData = userRepository.findByUserId(userId);
-
                 User user;
+                long now = System.currentTimeMillis();
+                List<User> userData = userRepository.findByUser_id(userId);
                 if (userData != null && userData.size() > 0) {
-
+                    // user already in database
                     if (userData.size() > 1) {
                         return new ResponseEntity<>(
                             "{\"result\":\"error\",\"msg\":\"more than one user found for provided token\"}",
@@ -87,18 +87,22 @@ public class UserController {
                         );
                     }
                     user = userData.get(0);
-                } else {
-                    user = new User();
-                }
 
-                user.setUserId(userId);
+                } else {
+                    // a new user
+                    user = new User();
+                    user.setFirst_login(now);
+                }
+                user.setLast_seen(now);
+                user.setUser_id(userId);
                 user.setId_provider(UserIdProvider.ID_PROVIDER_GOOGLE);
                 user.setName(name);
-                user.setAvatarUrl(pictureUrl);
+                user.setAvatar_url(pictureUrl);
                 User savedElement = userRepository.save(user);
 
-                User u = userRepository.findByUserId(userId).get(0);
-                PushrApplication.logger.info("Found user {} in database", u.getUserId());
+                // all fine?
+                User u = userRepository.findByUser_id(userId).get(0);
+                PushrApplication.logger.info("Found user {} in database", u.getUser_id());
 
                 return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
                 // Use or store profile information
