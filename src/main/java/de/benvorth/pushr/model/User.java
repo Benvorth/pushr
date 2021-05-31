@@ -8,7 +8,7 @@ import javax.persistence.*;
 // https://bezkoder.com/spring-boot-jpa-h2-example/
 
 @Entity
-@Table(name = "user")
+// @Table(name = "user")
 @NoArgsConstructor
 @Setter @Getter
 public class User {
@@ -17,30 +17,32 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id; // will be set when persisting
 
-    private String user_id;
-    private String id_provider;
+    private String userId;
+    private String idProvider;
     private String name;
-    private String avatar_url;
-    private long first_login;
-    private long last_seen;
+    private String avatarUrl;
+    private long firstLogin;
+    private long lastSeen;
 
-    public User (String user_id, String id_provider, String name, String avatar_url) {
-        this.user_id = user_id;
-        this.id_provider = id_provider;
+    public User (String userId, String idProvider, String name, String avatarUrl) {
+        this.userId = userId;
+        this.idProvider = idProvider;
         this.name = name;
-        this.avatar_url = avatar_url;
+        this.avatarUrl = avatarUrl;
         long now = System.currentTimeMillis();
-        this.first_login = now;
-        this.last_seen = now;
+        this.firstLogin = now;
+        this.lastSeen = now;
     }
 
     public String toJson () {
         return "{" +
             "\"id\":" + this.id + "," +
-            "\"user_id\":\"" + this.user_id + "\"," +
-            "\"id_provider\":\"" + this.id_provider + "\"," +
+            "\"userId\":\"" + this.userId + "\"," +
+            "\"idProvider\":\"" + this.idProvider + "\"," +
             "\"name\":\"" + this.name + "\"," +
-            "\"avatar_url\":\"" + this.avatar_url + "\"" +
+            "\"avatarUrl\":\"" + this.avatarUrl + "\"," +
+            "\"firstLogin\":\"" + this.firstLogin + "\"," +
+            "\"lastSeen\":\"" + this.lastSeen + "\"" +
             "}";
     }
 

@@ -1,6 +1,5 @@
 package de.benvorth.pushr.model;
 
-import com.google.api.client.googleapis.apache.v2.GoogleApacheHttpTransport;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -24,14 +23,14 @@ import java.util.List;
 @RequestMapping(path = "api")
 public class UserController {
 
-    UserRepository userRepository;
+    UserIdRepository userIdRepository;
 
     @Value("${oauth.appId.google}")
     private String appId_google;
 
     @Autowired
-    public UserController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserController(UserIdRepository userIdRepository) {
+        this.userIdRepository = userIdRepository;
     }
 
     @PutMapping("/user/google")
@@ -77,7 +76,7 @@ public class UserController {
 
                 User user;
                 long now = System.currentTimeMillis();
-                List<User> userData = userRepository.findByUser_id(userId);
+                List<User> userData = userIdRepository.findByUserId(userId);
                 if (userData != null && userData.size() > 0) {
                     // user already in database
                     if (userData.size() > 1) {
@@ -91,18 +90,18 @@ public class UserController {
                 } else {
                     // a new user
                     user = new User();
-                    user.setFirst_login(now);
+                    user.setFirstLogin(now);
                 }
-                user.setLast_seen(now);
-                user.setUser_id(userId);
-                user.setId_provider(UserIdProvider.ID_PROVIDER_GOOGLE);
+                user.setLastSeen(now);
+                user.setUserId(userId);
+                user.setIdProvider(UserIdProvider.ID_PROVIDER_GOOGLE);
                 user.setName(name);
-                user.setAvatar_url(pictureUrl);
-                User savedElement = userRepository.save(user);
+                user.setAvatarUrl(pictureUrl);
+                User savedElement = userIdRepository.save(user);
 
                 // all fine?
-                User u = userRepository.findByUser_id(userId).get(0);
-                PushrApplication.logger.info("Found user {} in database", u.getUser_id());
+                User u = userIdRepository.findByUserId(userId).get(0);
+                PushrApplication.logger.info("Found user {} in database", u.getUserId());
 
                 return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
                 // Use or store profile information
