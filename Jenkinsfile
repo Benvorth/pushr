@@ -18,16 +18,16 @@ pipeline {
         }
 
 
-        dir('pushr-fe') {
-
-            stage('Clone the frontend') {
-                steps {
+        stage('Clone the frontend') {
+            steps {
+                dir('pushr-fe') {
                     git branch: 'main', url: 'https://github.com/Benvorth/pushr-fe.git'
                 }
             }
-
-            stage('Build the frontend') {
-                steps {
+        }
+        stage('Build the frontend') {
+            steps {
+                dir('pushr-fe') {
                     sh 'npm install'
                     sh 'npm run build'
                 }
