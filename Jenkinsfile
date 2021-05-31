@@ -8,7 +8,7 @@ pipeline {
         MARIADB_PASSWORD = credentials('MARIADB_PASSWORD')
     }
 
-    node {
+    stages {
         stage("Stop server and clean workspace") {
             sh "chmod -R 777 ."
             sh "pid=\$(lsof -i:8081 -t) || true; kill -TERM \$pid || kill -KILL \$pid || true"
