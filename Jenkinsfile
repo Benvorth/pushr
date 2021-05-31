@@ -32,7 +32,7 @@ pipeline {
             steps {
                 dir('pushr-fe') {
                     sh 'pnpm install'
-                    sh 'npm run build'
+                    sh 'pnpm run build'
                 }
             }
         }
