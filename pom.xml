@@ -18,7 +18,7 @@
 		<java.version>1.8</java.version>
 	</properties>
 
-	<!-- for mapping of maven profiles and spring profiles, https://stackoverflow.com/questions/42390860/configure-active-profile-in-springboot-via-maven -->
+	<!-- for mapping of maven profiles and spring profiles, https://stackoverflow.com/questions/42390860/configure-active-profile-in-springboot-via-maven
 	<profiles>
 		<profile>
 			<id>dev</id>
@@ -35,7 +35,7 @@
 				<activatedProperties>prod</activatedProperties>
 			</properties>
 		</profile>
-	</profiles>
+	</profiles> -->
 
 	<dependencies>
 		<dependency>
@@ -103,13 +103,14 @@
 
 	<build>
 		<finalName>pushr</finalName> <!-- final name for war-file -->
-		<!-- Activate ressource filtering (for profiles) -->
+		<!-- Activate ressource filtering (for profiles)
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
 			</resource>
-		</resources>
+		</resources> -->
+
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
