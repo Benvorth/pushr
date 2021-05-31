@@ -4,7 +4,7 @@ pipeline {
     agent any
 
     environment {
-        MARIADB_USER = credentials('MARIADB_USER')
+        MARIADB_USER = "maier"
         MARIADB_PASSWORD = credentials('MARIADB_PASSWORD')
         JENKINS_NODE_COOKIE = 'dontkill'
     }
