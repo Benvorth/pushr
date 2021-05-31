@@ -1,5 +1,10 @@
 
 
+install node
+
+* ...
+* npm install -g pnpm
+
 
 install java 8:
 
@@ -31,6 +36,12 @@ install mariaDB
   >> update mysql.user set password=password('<rootPW>') where user='root';
   >> flush privileges;
   >> exit  
+  
+* CREATE DATABASE pushr;
+* CREATE USER 'pushr'@'localhost' IDENTIFIED BY '<Password>';
+* GRANT ALL PRIVILEGES ON pushr.* TO 'pushr'@localhost;
+
+
 * sudo service mysql restart
 
 install Jenkins:
