@@ -38,7 +38,7 @@ node {
     stage("Deploy new version") {
         withEnv(['JENKINS_NODE_COOKIE=dontkill']) {
             environment {
-                MARIADB_USER        = credentials('MARIADB_USER')
+                MARIADB_USER        = 'root'
                 MARIADB_PASSWORD    = credentials('MARIADB_PASSWORD')
             }
 
