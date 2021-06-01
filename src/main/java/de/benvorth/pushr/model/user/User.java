@@ -1,4 +1,4 @@
-package de.benvorth.pushr.model;
+package de.benvorth.pushr.model.user;
 
 import lombok.*;
 

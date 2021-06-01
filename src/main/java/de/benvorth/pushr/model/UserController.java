@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import de.benvorth.pushr.PushrApplication;
+import de.benvorth.pushr.model.user.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -18,19 +19,25 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(path = "api")
 public class UserController {
 
-    UserIdRepository userIdRepository;
+    UserRepository userRepository;
+    AccessTokenRepository accessTokenRepository;
 
     @Value("${oauth.appId.google}")
     private String appId_google;
 
     @Autowired
-    public UserController(UserIdRepository userIdRepository) {
-        this.userIdRepository = userIdRepository;
+    public UserController(
+        UserRepository userRepository,
+        AccessTokenRepository accessTokenRepository
+        ) {
+        this.userRepository = userRepository;
+        this.accessTokenRepository = accessTokenRepository;
     }
 
     @PutMapping("/user/google")
@@ -76,7 +83,7 @@ public class UserController {
 
                 User user;
                 long now = System.currentTimeMillis();
-                List<User> userData = userIdRepository.findByUserId(userId);
+                List<User> userData = userRepository.findByUserId(userId);
                 if (userData != null && userData.size() > 0) {
                     // user already in database
                     if (userData.size() > 1) {
@@ -94,18 +101,53 @@ public class UserController {
                 }
                 user.setLastSeen(now);
                 user.setUserId(userId);
-                user.setIdProvider(UserIdProvider.ID_PROVIDER_GOOGLE);
+                user.setIdProvider(UserUtils.ID_PROVIDER_GOOGLE);
                 user.setName(name);
                 user.setAvatarUrl(pictureUrl);
-                User savedElement = userIdRepository.save(user);
+                User savedElement = userRepository.save(user);
 
                 // all fine?
-                User u = userIdRepository.findByUserId(userId).get(0);
+                User u = userRepository.findByUserId(userId).get(0);
                 PushrApplication.logger.info("Found user {} in database", u.getUserId());
 
-                return new ResponseEntity<>(savedElement.toJson(), HttpStatus.OK);
-                // Use or store profile information
-                // ...
+                AccessToken token = new AccessToken();
+                boolean createNewToken = true;
+                Optional<AccessToken> tokenResult = accessTokenRepository.findById(user.getId());
+                if (tokenResult.isPresent()) {
+                    PushrApplication.logger.info("Found token for user {} in database", user.getId());
+
+                    token = tokenResult.get();
+                    if (token.isExpired()) {
+                        PushrApplication.logger.info("Token for user {} IS expired", user.getId());
+                        PushrApplication.logger.info("Delete old token for user {}", user.getUserId());
+                        accessTokenRepository.delete(token);
+                    } else {
+                        PushrApplication.logger.info("Token for user {} is not expired", user.getId());
+                        createNewToken = false;
+                    }
+                }
+
+                if (createNewToken) {
+                    PushrApplication.logger.info("Create new token for user {}", user.getId());
+                    long id = user.getId();
+                    long exp = now + UserUtils.TOKEN_TTL;
+                    token = new AccessToken(id, UserUtils.generateToken(id, exp), now, exp);
+                    accessTokenRepository.save(token);
+                }
+
+                // all fine?
+                Optional<AccessToken> tokenResultTest = accessTokenRepository.findById(user.getId());
+                if (!tokenResultTest.isPresent()) {
+                    PushrApplication.logger.error("Token for user {} is NOT in database", u.getUserId());
+                    return new ResponseEntity<>(
+                        "{\"result\":\"error\",\"msg\":\"Unable to generate user token\"}",
+                        HttpStatus.INTERNAL_SERVER_ERROR
+                    );
+                }
+                PushrApplication.logger.info("Token for user {} is in database", u.getUserId());
+
+
+                return new ResponseEntity<>(token.toJson(), HttpStatus.OK);
 
             } else {
                 PushrApplication.logger.info("Provided ID token '{}' is not a valid google token", idTokenString);

@@ -31,16 +31,17 @@ install mariaDB
   sudo systemctl status mariadb
 * sudo mysql_secure_installation
   (Set root password, Remove anonymous users, Disallow root login remotely, Remove test database and access to it, Reload privilege tables)
+  
 * re-set root password:
   >mysql -u root -p
   >> update mysql.user set password=password('<rootPW>') where user='root';
   >> flush privileges;
   >> exit  
   
-* CREATE DATABASE pushr;
-* CREATE USER 'pushr'@'localhost' IDENTIFIED BY '<Password>';
-* GRANT ALL PRIVILEGES ON pushr.* TO 'pushr'@localhost;
-
+* >> CREATE DATABASE pushr;
+  >> CREATE USER 'pushr'@'localhost' IDENTIFIED BY '<Password>';
+  >> GRANT ALL PRIVILEGES ON pushr.* TO 'pushr'@localhost;
+  >> flush privileges;
 
 * sudo service mysql restart
 
