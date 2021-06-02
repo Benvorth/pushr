@@ -4,27 +4,30 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Entity
 // @Table(name = "access_token")
 @NoArgsConstructor
-@Setter
-@Getter
+@Setter @Getter
 public class AccessToken {
 
     @Id
-    private long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "access_token_id")
+    private Long accessTokenId;
 
     private String token;
     private long created;
     private long expires;
 
-    public AccessToken (long id, String token, long created, long expires) {
-        this.setId(id);
+    // mappedBy: To declare a side as not responsible for the relationship.
+    // Value: the variable name of this class instance on the owner side
+    @OneToOne(mappedBy = "accessToken")
+    private User user;
+
+    public AccessToken (String token, long created, long expires) {
+
         this.setToken(token);
         this.setCreated(created);
         this.setExpires(expires);
@@ -32,7 +35,15 @@ public class AccessToken {
 
     public String toJson () {
         return "{" +
-            "\"id\":" + this.getId() + "," +
+            "\"userId\":" + this.getAccessTokenId() + "," +
+            "\"token\":\"" + this.getToken() + "\"," +
+            "\"created\":" + this.getCreated() + "," +
+            "\"expires\":" + this.getExpires() + "" +
+            "}";
+    }
+
+    public String getJsonResultForClient () {
+        return "{" +
             "\"token\":\"" + this.getToken() + "\"," +
             "\"created\":" + this.getCreated() + "," +
             "\"expires\":" + this.getExpires() + "" +

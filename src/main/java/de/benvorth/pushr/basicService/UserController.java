@@ -1,4 +1,4 @@
-package de.benvorth.pushr.model;
+package de.benvorth.pushr.basicService;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -58,7 +58,7 @@ public class UserController {
                 GoogleIdToken.Payload payload = idToken.getPayload();
 
 
-                String userId = payload.getSubject();
+                String providerIdUser = payload.getSubject();
                 // Get profile information from payload
                 String email = payload.getEmail();
                 boolean emailVerified = Boolean.valueOf(payload.getEmailVerified());
@@ -70,7 +70,7 @@ public class UserController {
 
                 PushrApplication.logger.info(
                     "++++Valid google token: " +
-                    "    userId: {},\n" +
+                    "    providerIdUser: {},\n" +
                     "    email: {},\n" +
                     "    emailVerified: {},\n" +
                     "    name: {},\n" +
@@ -78,12 +78,12 @@ public class UserController {
                     "    locale: {},\n" +
                     "    familyName: {},\n" +
                     "    givenName: {}",
-                    userId, email, emailVerified, name, pictureUrl, locale, familyName, givenName
+                    providerIdUser, email, emailVerified, name, pictureUrl, locale, familyName, givenName
                 );
 
                 User user;
                 long now = System.currentTimeMillis();
-                List<User> userData = userRepository.findByUserId(userId);
+                List<User> userData = userRepository.findByProviderId(providerIdUser);
                 if (userData != null && userData.size() > 0) {
                     // user already in database
                     if (userData.size() > 1) {
@@ -100,43 +100,46 @@ public class UserController {
                     user.setFirstLogin(now);
                 }
                 user.setLastSeen(now);
-                user.setUserId(userId);
+                user.setProviderId(providerIdUser);
                 user.setIdProvider(UserUtils.ID_PROVIDER_GOOGLE);
                 user.setName(name);
+                user.setLocale(locale);
                 user.setAvatarUrl(pictureUrl);
                 User savedElement = userRepository.save(user);
 
                 // all fine?
-                User u = userRepository.findByUserId(userId).get(0);
-                PushrApplication.logger.info("Found user {} in database", u.getUserId());
+                User u = userRepository.findByProviderId(providerIdUser).get(0);
+                PushrApplication.logger.info("Found user {} in database", u.getProviderId());
 
                 AccessToken token = new AccessToken();
                 boolean createNewToken = true;
-                Optional<AccessToken> tokenResult = accessTokenRepository.findById(user.getId());
+                Optional<AccessToken> tokenResult = accessTokenRepository.findById(user.getAccessToken().getAccessTokenId());
                 if (tokenResult.isPresent()) {
-                    PushrApplication.logger.info("Found token for user {} in database", user.getId());
+                    PushrApplication.logger.info("Found token for user {} in database", user.getUserId());
 
                     token = tokenResult.get();
                     if (token.isExpired()) {
-                        PushrApplication.logger.info("Token for user {} IS expired", user.getId());
+                        PushrApplication.logger.info("Token for user {} IS expired", user.getUserId());
                         PushrApplication.logger.info("Delete old token for user {}", user.getUserId());
                         accessTokenRepository.delete(token);
                     } else {
-                        PushrApplication.logger.info("Token for user {} is not expired", user.getId());
+                        PushrApplication.logger.info("Token for user {} is not expired", user.getUserId());
                         createNewToken = false;
                     }
                 }
 
                 if (createNewToken) {
-                    PushrApplication.logger.info("Create new token for user {}", user.getId());
-                    long id = user.getId();
+                    PushrApplication.logger.info("Create new token for user {}", user.getUserId());
+                    long userId = user.getUserId();
                     long exp = now + UserUtils.TOKEN_TTL;
-                    token = new AccessToken(id, UserUtils.generateToken(id, exp), now, exp);
-                    accessTokenRepository.save(token);
+                    token = new AccessToken(UserUtils.generateToken(userId, exp), now, exp);
+                    accessTokenRepository.save(token); // save "passive" side first
+                    user.setAccessToken(token); // update "owning" side
+                    userRepository.save(user); // update "owning" side
                 }
 
                 // all fine?
-                Optional<AccessToken> tokenResultTest = accessTokenRepository.findById(user.getId());
+                Optional<AccessToken> tokenResultTest = accessTokenRepository.findById(user.getAccessToken().getAccessTokenId());
                 if (!tokenResultTest.isPresent()) {
                     PushrApplication.logger.error("Token for user {} is NOT in database", u.getUserId());
                     return new ResponseEntity<>(
@@ -146,8 +149,7 @@ public class UserController {
                 }
                 PushrApplication.logger.info("Token for user {} is in database", u.getUserId());
 
-
-                return new ResponseEntity<>(token.toJson(), HttpStatus.OK);
+                return new ResponseEntity<>(token.getJsonResultForClient(), HttpStatus.OK);
 
             } else {
                 PushrApplication.logger.info("Provided ID token '{}' is not a valid google token", idTokenString);
@@ -165,6 +167,8 @@ public class UserController {
             );
         }
     }
+
+
 
 
 }

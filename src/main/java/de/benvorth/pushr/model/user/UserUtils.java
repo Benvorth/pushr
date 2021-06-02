@@ -29,14 +29,33 @@ public class UserUtils {
     }
 
     public static long getIdFromToken (String token) {
-        String hex2 = token.substring(16, 16);
-        long id = Long.MAX_VALUE - Long.parseLong(hex2, 16);
-        return id;
+        try{
+            String hex2 = token.substring(16, 16);
+            long id = Long.MAX_VALUE - Long.parseLong(hex2, 16);
+            return id;
+        } catch (Exception e) {
+            return -1;
+        }
     }
 
     public static long getExpiryFromToken (String token) {
-        String exp = token.substring(32);
-        long expires = Long.parseLong(exp, 16);
-        return expires;
+        try {
+            String exp = token.substring(32);
+            long expires = Long.parseLong(exp, 16);
+            return expires;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public static boolean isInvalidToken(String accessToken, AccessTokenRepository accessTokenRepository) {
+        if (accessToken == null
+            || accessTokenRepository.findByToken(accessToken).size() == 0
+            || UserUtils.isTokenExpired(accessToken)
+        ) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }

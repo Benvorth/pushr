@@ -7,6 +7,8 @@ import javax.persistence.*;
 // https://www.javatpoint.com/spring-boot-jpa
 // https://bezkoder.com/spring-boot-jpa-h2-example/
 
+// https://www.baeldung.com/jpa-one-to-one
+
 @Entity
 // @Table(name = "user")
 @NoArgsConstructor
@@ -15,19 +17,26 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private long id; // will be set when persisting
+    @Column(name = "user_id")
+    private long userId; // will be set when persisting
 
-    private String userId;
+    private String providerId;
     private String idProvider;
     private String name;
+    private String locale;
     private String avatarUrl;
     private long firstLogin;
     private long lastSeen;
 
-    public User (String userId, String idProvider, String name, String avatarUrl) {
-        this.userId = userId;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "access_token_id", referencedColumnName = "access_token_id")
+    private AccessToken accessToken;
+
+    public User (String providerId, String idProvider, String name, String locale, String avatarUrl) {
+        this.providerId = providerId;
         this.idProvider = idProvider;
         this.name = name;
+        this.locale = locale;
         this.avatarUrl = avatarUrl;
         long now = System.currentTimeMillis();
         this.firstLogin = now;
@@ -36,13 +45,14 @@ public class User {
 
     public String toJson () {
         return "{" +
-            "\"id\":" + this.id + "," +
-            "\"userId\":\"" + this.userId + "\"," +
-            "\"idProvider\":\"" + this.idProvider + "\"," +
-            "\"name\":\"" + this.name + "\"," +
-            "\"avatarUrl\":\"" + this.avatarUrl + "\"," +
-            "\"firstLogin\":\"" + this.firstLogin + "\"," +
-            "\"lastSeen\":\"" + this.lastSeen + "\"" +
+            "\"userId\":" + this.getUserId() + "," +
+            "\"providerId\":\"" + this.getProviderId() + "\"," +
+            "\"idProvider\":\"" + this.getIdProvider() + "\"," +
+            "\"name\":\"" + this.getName() + "\"," +
+            "\"locale\":\"" + this.getLocale() + "\"," +
+            "\"avatarUrl\":\"" + this.getAvatarUrl() + "\"," +
+            "\"firstLogin\":\"" + this.getFirstLogin() + "\"," +
+            "\"lastSeen\":\"" + this.getLastSeen() + "\"" +
             "}";
     }
 
