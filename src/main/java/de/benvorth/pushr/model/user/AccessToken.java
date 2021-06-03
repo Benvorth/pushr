@@ -21,7 +21,7 @@ public class AccessToken {
     private long created;
     private long expires;
 
-    // mappedBy: To declare a side as not responsible for the relationship.
+    // mappedBy: To declare a side as not responsible for the FK-relationship.
     // Value: the variable name of this class instance on the owner side
     @OneToOne(mappedBy = "accessToken")
     private User user;
@@ -35,7 +35,7 @@ public class AccessToken {
 
     public String toJson () {
         return "{" +
-            "\"userId\":" + this.getAccessTokenId() + "," +
+            "\"access_token_id\":" + this.getAccessTokenId() + "," +
             "\"token\":\"" + this.getToken() + "\"," +
             "\"created\":" + this.getCreated() + "," +
             "\"expires\":" + this.getExpires() + "" +

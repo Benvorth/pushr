@@ -6,9 +6,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.benvorth.pushr.PushrApplication;
 import de.benvorth.pushr.model.PushrHTTPresult;
+import de.benvorth.pushr.model.push.PushSubscription;
 import de.benvorth.pushr.model.push.PushSubscriptionRespository;
-import de.benvorth.pushr.model.user.AccessTokenRepository;
-import de.benvorth.pushr.model.user.UserUtils;
+import de.benvorth.pushr.model.user.*;
 import de.benvorth.pushr.pushService.dto.PushMessage;
 import de.benvorth.pushr.pushService.dto.Subscription;
 import de.benvorth.pushr.pushService.dto.SubscriptionEndpoint;
@@ -53,12 +53,14 @@ public class PushMsgController {
     private final CryptoService cryptoService;
     private final Algorithm jwtAlgorithm;
 
+    UserRepository userRepository;
     AccessTokenRepository accessTokenRepository;
     PushSubscriptionRespository pushSubscriptionRespository;
 
     @Autowired
     public PushMsgController(ServerKeys serverKeys, CryptoService cryptoService,
                              ObjectMapper objectMapper,
+                             UserRepository userRepository,
                              AccessTokenRepository accessTokenRepository,
                              PushSubscriptionRespository pushSubscriptionRespository
                           ) {
@@ -70,6 +72,7 @@ public class PushMsgController {
         this.jwtAlgorithm = Algorithm.ECDSA256(this.serverKeys.getPublicKey(),
             this.serverKeys.getPrivateKey());
 
+        this.userRepository = userRepository;
         this.accessTokenRepository = accessTokenRepository;
         this.pushSubscriptionRespository = pushSubscriptionRespository;
     }
@@ -101,7 +104,6 @@ public class PushMsgController {
         path = "/subscribe",
         produces = "application/json"
     )
-    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<String> subscribe(
         @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
         @RequestBody Subscription subscription
@@ -112,6 +114,31 @@ public class PushMsgController {
                 HttpStatus.UNAUTHORIZED
             );
         }
+        AccessToken accessTokenObj = accessTokenRepository.findByToken(accessToken).get(0);
+        User user = accessTokenObj.getUser();
+
+        PushSubscription pushSubscription;
+        List<PushSubscription> existingSubscriptions =
+            pushSubscriptionRespository.findByEndpoint(subscription.getEndpoint());
+        if (existingSubscriptions.size() == 1) {
+            pushSubscription = existingSubscriptions.get(0);
+        } else if (existingSubscriptions.size() > 1) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "More than one pushMsg subscription found for this endpoint").getJSON(),
+                HttpStatus.BAD_REQUEST
+            );
+        } else {
+            pushSubscription = new PushSubscription(
+                subscription.getEndpoint(),
+                (subscription.getExpirationTime() != null ? subscription.getExpirationTime() : 0),
+                subscription.getKeys().getP256dh(),
+                subscription.getKeys().getAuth()
+            );
+            pushSubscriptionRespository.save(pushSubscription); // save "passive" side first
+        }
+        user.setPushSubscription(pushSubscription); // update "owning" side
+        userRepository.save(user); // save "owning" side
+
 
         this.subscriptions.put(subscription.getEndpoint(), subscription);
         String subscriptionId = createHash(subscription);

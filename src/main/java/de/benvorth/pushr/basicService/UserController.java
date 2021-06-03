@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -40,7 +37,11 @@ public class UserController {
         this.accessTokenRepository = accessTokenRepository;
     }
 
-    @PutMapping("/user/google")
+    @RequestMapping(
+        method = RequestMethod.PUT,
+        path = "/user/google",
+        produces = "application/json"
+    )
     public ResponseEntity<String> putUser (@RequestBody String idTokenString) {
 
         // validate provided User
@@ -113,18 +114,20 @@ public class UserController {
 
                 AccessToken token = new AccessToken();
                 boolean createNewToken = true;
-                Optional<AccessToken> tokenResult = accessTokenRepository.findById(user.getAccessToken().getAccessTokenId());
-                if (tokenResult.isPresent()) {
-                    PushrApplication.logger.info("Found token for user {} in database", user.getUserId());
+                if (user.getAccessToken() != null) {
+                    Optional<AccessToken> tokenResult = accessTokenRepository.findById(user.getAccessToken().getAccessTokenId());
+                    if (tokenResult.isPresent()) {
+                        PushrApplication.logger.info("Found token for user {} in database", user.getUserId());
 
-                    token = tokenResult.get();
-                    if (token.isExpired()) {
-                        PushrApplication.logger.info("Token for user {} IS expired", user.getUserId());
-                        PushrApplication.logger.info("Delete old token for user {}", user.getUserId());
-                        accessTokenRepository.delete(token);
-                    } else {
-                        PushrApplication.logger.info("Token for user {} is not expired", user.getUserId());
-                        createNewToken = false;
+                        token = tokenResult.get();
+                        if (token.isExpired()) {
+                            PushrApplication.logger.info("Token for user {} IS expired", user.getUserId());
+                            PushrApplication.logger.info("Delete old token for user {}", user.getUserId());
+                            accessTokenRepository.delete(token);
+                        } else {
+                            PushrApplication.logger.info("Token for user {} is not expired", user.getUserId());
+                            createNewToken = false;
+                        }
                     }
                 }
 
@@ -135,7 +138,7 @@ public class UserController {
                     token = new AccessToken(UserUtils.generateToken(userId, exp), now, exp);
                     accessTokenRepository.save(token); // save "passive" side first
                     user.setAccessToken(token); // update "owning" side
-                    userRepository.save(user); // update "owning" side
+                    userRepository.save(user); // save "owning" side
                 }
 
                 // all fine?

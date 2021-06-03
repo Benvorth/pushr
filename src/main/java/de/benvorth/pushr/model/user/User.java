@@ -1,5 +1,6 @@
 package de.benvorth.pushr.model.user;
 
+import de.benvorth.pushr.model.push.PushSubscription;
 import lombok.*;
 
 import javax.persistence.*;
@@ -20,6 +21,7 @@ public class User {
     @Column(name = "user_id")
     private long userId; // will be set when persisting
 
+    @Column(unique = true)
     private String providerId;
     private String idProvider;
     private String name;
@@ -31,6 +33,10 @@ public class User {
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "access_token_id", referencedColumnName = "access_token_id")
     private AccessToken accessToken;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "push_subscription_id", referencedColumnName = "push_subscription_id")
+    private PushSubscription pushSubscription;
 
     public User (String providerId, String idProvider, String name, String locale, String avatarUrl) {
         this.providerId = providerId;
@@ -51,9 +57,11 @@ public class User {
             "\"name\":\"" + this.getName() + "\"," +
             "\"locale\":\"" + this.getLocale() + "\"," +
             "\"avatarUrl\":\"" + this.getAvatarUrl() + "\"," +
-            "\"firstLogin\":\"" + this.getFirstLogin() + "\"," +
-            "\"lastSeen\":\"" + this.getLastSeen() + "\"" +
-            "}";
+            "\"firstLogin\":" + this.getFirstLogin() + "," +
+            "\"lastSeen\":" + this.getLastSeen() + "," +
+            "\"access_token_id\":" + this.getAccessToken().getAccessTokenId() + "," +
+            "\"push_subscription_id\":" + this.getPushSubscription().getPushSubscriptionId() + "" +
+        "}";
     }
 
 }
