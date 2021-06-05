@@ -14,10 +14,15 @@ import org.springframework.web.bind.annotation.*;
 public class PushrController {
 
     AccessTokenRepository accessTokenRepository;
+    ControllerUtil controllerUtil;
 
     @Autowired
-    public PushrController (AccessTokenRepository accessTokenRepository) {
+    public PushrController (
+        AccessTokenRepository accessTokenRepository,
+        ControllerUtil controllerUtil
+    ) {
         this.accessTokenRepository = accessTokenRepository;
+        this.controllerUtil = controllerUtil;
     }
 
     @RequestMapping(
@@ -28,7 +33,7 @@ public class PushrController {
     public ResponseEntity<String> isAlive(
         @RequestHeader("x-pushr-access-token") String accessToken // if not present: result is 400 - Bad Request
     ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
+        if (controllerUtil.isInvalidToken(accessToken)) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "Cannot claim token, no or unknown subscriptionEndpoint provided").getJSON(),
                 HttpStatus.UNAUTHORIZED

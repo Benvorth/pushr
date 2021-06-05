@@ -1,19 +1,19 @@
-package de.benvorth.pushr.pushService.dto;
+package de.benvorth.pushr.model.device.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Subscription {
+public class ClientPushMsgSubscription {
     private final String endpoint;
 
     private final Long expirationTime;
 
-    public final SubscriptionKeys keys;
+    public final ClientSubscriptionKeys keys;
 
     @JsonCreator
-    public Subscription(@JsonProperty("endpoint") String endpoint,
+    public ClientPushMsgSubscription(@JsonProperty("endpoint") String endpoint,
                         @JsonProperty("expirationTime") Long expirationTime,
-                        @JsonProperty("keys") SubscriptionKeys keys) {
+                        @JsonProperty("keys") ClientSubscriptionKeys keys) {
         this.endpoint = endpoint;
         this.expirationTime = expirationTime;
         this.keys = keys;
@@ -27,7 +27,7 @@ public class Subscription {
         return this.expirationTime;
     }
 
-    public SubscriptionKeys getKeys() {
+    public ClientSubscriptionKeys getKeys() {
         return this.keys;
     }
 
@@ -53,7 +53,7 @@ public class Subscription {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        Subscription other = (Subscription) obj;
+        ClientPushMsgSubscription other = (ClientPushMsgSubscription) obj;
         if (this.endpoint == null) {
             if (other.endpoint != null) {
                 return false;

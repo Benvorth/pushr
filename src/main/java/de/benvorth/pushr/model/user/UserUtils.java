@@ -8,14 +8,14 @@ public class UserUtils {
 
     public static final long TOKEN_TTL = 60 * 60 * 1000; // 1 hour
 
-    public static String generateToken (long id, long expires) {
+    public static String generateToken (long userId, long expires) {
         long generatedLong = new Random().nextLong();
         String hex1 = Long.toHexString(generatedLong);
         while (hex1.length() < 16) {
             hex1 = "0" + hex1;
         }
 
-        String hex2 = Long.toHexString(Long.MAX_VALUE - id);
+        String hex2 = Long.toHexString(Long.MAX_VALUE - userId);
         while (hex2.length() < 16) {
             hex2 = "0" + hex2;
         }
@@ -28,7 +28,7 @@ public class UserUtils {
         return (System.currentTimeMillis() > getExpiryFromToken(token));
     }
 
-    public static long getIdFromToken (String token) {
+    public static long getUserIdFromToken (String token) {
         try{
             String hex2 = token.substring(16, 16);
             long id = Long.MAX_VALUE - Long.parseLong(hex2, 16);
@@ -48,14 +48,5 @@ public class UserUtils {
         }
     }
 
-    public static boolean isInvalidToken(String accessToken, AccessTokenRepository accessTokenRepository) {
-        if (accessToken == null
-            || accessTokenRepository.findByToken(accessToken).size() == 0
-            || UserUtils.isTokenExpired(accessToken)
-        ) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+
 }

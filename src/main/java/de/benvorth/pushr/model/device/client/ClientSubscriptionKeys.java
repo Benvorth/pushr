@@ -1,16 +1,16 @@
-package de.benvorth.pushr.pushService.dto;
+package de.benvorth.pushr.model.device.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SubscriptionKeys {
+public class ClientSubscriptionKeys {
     private final String p256dh;
 
     private final String auth;
 
     @JsonCreator
-    public SubscriptionKeys(@JsonProperty("p256dh") String p256dh,
-                            @JsonProperty("auth") String auth) {
+    public ClientSubscriptionKeys(@JsonProperty("p256dh") String p256dh,
+                                  @JsonProperty("auth") String auth) {
         this.p256dh = p256dh;
         this.auth = auth;
     }
@@ -43,7 +43,7 @@ public class SubscriptionKeys {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        SubscriptionKeys other = (SubscriptionKeys) obj;
+        ClientSubscriptionKeys other = (ClientSubscriptionKeys) obj;
         if (this.auth == null) {
             if (other.auth != null) {
                 return false;

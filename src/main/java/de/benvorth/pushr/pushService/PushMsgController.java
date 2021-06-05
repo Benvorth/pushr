@@ -5,13 +5,14 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.benvorth.pushr.PushrApplication;
+import de.benvorth.pushr.basicService.ControllerUtil;
 import de.benvorth.pushr.model.PushrHTTPresult;
-import de.benvorth.pushr.model.push.PushSubscription;
-import de.benvorth.pushr.model.push.PushSubscriptionRespository;
+import de.benvorth.pushr.model.device.Device;
+import de.benvorth.pushr.model.device.DeviceRespository;
+import de.benvorth.pushr.model.trigger.Trigger;
+import de.benvorth.pushr.model.trigger.TriggerRepository;
 import de.benvorth.pushr.model.user.*;
-import de.benvorth.pushr.pushService.dto.PushMessage;
-import de.benvorth.pushr.pushService.dto.Subscription;
-import de.benvorth.pushr.pushService.dto.SubscriptionEndpoint;
+import de.benvorth.pushr.model.message.PushMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -24,14 +25,11 @@ import org.springframework.web.client.RestTemplate;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.*;
@@ -44,10 +42,10 @@ public class PushMsgController {
     private final RestTemplate httpClient;
     private final ObjectMapper objectMapper;
 
-    private final Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
-    private final Map<String, Subscription> subscriptionsById = new ConcurrentHashMap<>();
-    private final Map<String, Subscription> tokenToSubscription = new ConcurrentHashMap<>();
-    private String lastNumbersAPIFact = "";
+
+    // todo replace this by the token repo
+    private final Map<String, Device> tokenToSubscription = new ConcurrentHashMap<>();
+
 
     private final ServerKeys serverKeys;
     private final CryptoService cryptoService;
@@ -55,15 +53,20 @@ public class PushMsgController {
 
     UserRepository userRepository;
     AccessTokenRepository accessTokenRepository;
-    PushSubscriptionRespository pushSubscriptionRespository;
+    DeviceRespository deviceRespository;
+    TriggerRepository triggerRepository;
+    ControllerUtil controllerUtil;
 
     @Autowired
-    public PushMsgController(ServerKeys serverKeys, CryptoService cryptoService,
-                             ObjectMapper objectMapper,
-                             UserRepository userRepository,
-                             AccessTokenRepository accessTokenRepository,
-                             PushSubscriptionRespository pushSubscriptionRespository
-                          ) {
+    public PushMsgController(
+        ServerKeys serverKeys, CryptoService cryptoService,
+        ObjectMapper objectMapper,
+        UserRepository userRepository,
+        AccessTokenRepository accessTokenRepository,
+        DeviceRespository deviceRespository,
+        TriggerRepository triggerRepository,
+        ControllerUtil controllerUtil
+    ) {
         this.serverKeys = serverKeys;
         this.cryptoService = cryptoService;
         this.httpClient = new RestTemplate();
@@ -74,7 +77,9 @@ public class PushMsgController {
 
         this.userRepository = userRepository;
         this.accessTokenRepository = accessTokenRepository;
-        this.pushSubscriptionRespository = pushSubscriptionRespository;
+        this.deviceRespository = deviceRespository;
+        this.triggerRepository = triggerRepository;
+        this.controllerUtil = controllerUtil;
     }
 
 
@@ -86,7 +91,7 @@ public class PushMsgController {
     public byte[] publicSigningKey(
         @RequestHeader("x-pushr-access-token") String accessToken // if not present: result is 400 - Bad Request
     ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
+        if (controllerUtil.isInvalidToken(accessToken)) {
             return null;
         }
         return this.serverKeys.getPublicKeyUncompressed();
@@ -97,103 +102,6 @@ public class PushMsgController {
     public String publicSigningKeyBase64() {
         return this.serverKeys.getPublicKeyBase64();
     }*/
-
-
-    @RequestMapping(
-        method = RequestMethod.POST,
-        path = "/subscribe",
-        produces = "application/json"
-    )
-    public ResponseEntity<String> subscribe(
-        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        @RequestBody Subscription subscription
-    ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
-                HttpStatus.UNAUTHORIZED
-            );
-        }
-        AccessToken accessTokenObj = accessTokenRepository.findByToken(accessToken).get(0);
-        User user = accessTokenObj.getUser();
-
-        PushSubscription pushSubscription;
-        List<PushSubscription> existingSubscriptions =
-            pushSubscriptionRespository.findByEndpoint(subscription.getEndpoint());
-        if (existingSubscriptions.size() == 1) {
-            pushSubscription = existingSubscriptions.get(0);
-        } else if (existingSubscriptions.size() > 1) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "More than one pushMsg subscription found for this endpoint").getJSON(),
-                HttpStatus.BAD_REQUEST
-            );
-        } else {
-            pushSubscription = new PushSubscription(
-                subscription.getEndpoint(),
-                (subscription.getExpirationTime() != null ? subscription.getExpirationTime() : 0),
-                subscription.getKeys().getP256dh(),
-                subscription.getKeys().getAuth()
-            );
-            pushSubscriptionRespository.save(pushSubscription); // save "passive" side first
-        }
-        user.setPushSubscription(pushSubscription); // update "owning" side
-        userRepository.save(user); // save "owning" side
-
-
-        this.subscriptions.put(subscription.getEndpoint(), subscription);
-        String subscriptionId = createHash(subscription);
-        this.subscriptionsById.put(subscriptionId, subscription);
-        return new ResponseEntity<>(
-            "{\"subscriptionId\":\"" + subscriptionId + "\"}",
-            HttpStatus.CREATED
-        );
-    }
-
-
-    @RequestMapping(
-        method = RequestMethod.POST,
-        path = "/claimToken",
-        produces = "application/json"
-    )
-    public ResponseEntity<String> claimToken(
-        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        @RequestParam("token") String token,
-        @RequestParam("subscriptionEndpoint") String subscriptionEndpoint
-        // @RequestBody Subscription subscription
-    ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
-                HttpStatus.UNAUTHORIZED
-            );
-        }
-
-        // todo: check if we know the token
-        if (false) {
-
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No or unknown token provided").getJSON(),
-                HttpStatus.CREATED
-            );
-        }
-
-        Subscription subscription = this.getSubscriptionByEndpoint(subscriptionEndpoint);
-        if (subscription != null) {
-            tokenToSubscription.put(token, subscription);
-            PushrApplication.logger.info("Token {} claimed successfully", token);
-            // return this.sendTextPushMessage(subscription, new PushMessage("Text Notification", message));
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Token claimed").getJSON(),
-                HttpStatus.CREATED
-            );
-        }
-
-        PushrApplication.logger.info("Cant claim token {}: No subscriptionEndpoint provided", token);
-        return new ResponseEntity<>(
-            new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "Cannot claim token, no or unknown subscriptionEndpoint provided").getJSON(),
-            HttpStatus.BAD_REQUEST
-        );
-    }
 
 
     @RequestMapping(
@@ -220,7 +128,7 @@ public class PushMsgController {
         @RequestParam(name="swver", required = false) String swver, // SW-version
         @RequestParam(name="hwver", required = false) String hwver // HW-version
     ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
+        if (controllerUtil.isInvalidToken(accessToken)) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
@@ -264,10 +172,20 @@ public class PushMsgController {
             (hwver != null ? hwver : "null")
         );
 
-        if (tokenToSubscription.containsKey(token)) {
-            Subscription subscription = this.tokenToSubscription.get(token);
-            // todo check if this msg was delivered
-            this.sendTextPushMessage(subscription, new PushMessage("Text Notification", "Hi from token " + token));
+        List<Trigger> triggers = triggerRepository.findByToken(token);
+        for (Trigger trigger : triggers) {
+
+            List<Device> devices = deviceRespository.findByUser(trigger.getUser());
+            for (Device device : devices) {
+                PushMessage msg = new PushMessage();
+                msg.setTitle("Text Notification");
+                msg.setBody(
+                    "Hi from token " + token + "\n" +
+                    "(Fired by trigger '" + trigger.getName() + "')"
+                );
+                boolean deleteDevice = this.sendTextPushMessage(device, msg);
+
+            }
         }
 
         return new ResponseEntity<>(
@@ -276,83 +194,6 @@ public class PushMsgController {
         );
     }
 
-    private String createHash(Subscription subscription) {
-        byte[] bytesOfMessage = new byte[0];
-        String hashtext = "";
-        try {
-            bytesOfMessage = subscription.toString().getBytes("UTF-8");
-            MessageDigest md = null;
-            md = MessageDigest.getInstance("MD5");
-
-            md.reset();
-            md.update(bytesOfMessage);
-            byte[] thedigest = md.digest();
-            BigInteger bigInt = new BigInteger(1, thedigest);
-            hashtext = bigInt.toString(16);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }  catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-
-        // Now we need to zero pad it if you actually want the full 32 chars.
-        while(hashtext.length() < 32 ){
-            hashtext = "0" + hashtext;
-        }
-        return hashtext;
-    }
-
-
-    @RequestMapping(
-        method = RequestMethod.POST,
-        path = "/unsubscribe",
-        produces = "application/json"
-    )
-    public ResponseEntity<String> unsubscribe(
-        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        @RequestBody SubscriptionEndpoint subscription
-    ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
-                HttpStatus.UNAUTHORIZED
-            );
-        }
-
-        // todo check if this was successful
-        // todo check if subscription needs to be removed from google-server, too?
-        this.subscriptions.remove(subscription.getEndpoint());
-
-        return new ResponseEntity<>(
-            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Subscription for push messages removed from server").getJSON(),
-            HttpStatus.UNAUTHORIZED
-        );
-    }
-
-
-    @RequestMapping(
-        method = RequestMethod.POST,
-        path = "/isSubscribed",
-        produces = "application/json"
-    )
-    public ResponseEntity<String> isSubscribed(
-        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        @RequestBody SubscriptionEndpoint subscription
-    ) {
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
-                HttpStatus.UNAUTHORIZED
-            );
-        }
-
-        boolean isSubscribed = this.subscriptions.containsKey(subscription.getEndpoint());
-
-        return new ResponseEntity<>(
-            "{\"status\":\"" + PushrHTTPresult.STATUS_SUCCESS + "\",\"msg\":" + (isSubscribed ? "true": "false") + "}",
-            HttpStatus.OK
-        );
-    }
 
     @RequestMapping(
         method = RequestMethod.POST,
@@ -365,27 +206,34 @@ public class PushMsgController {
         @RequestBody String message
     ) {
 
-        if (UserUtils.isInvalidToken(accessToken, accessTokenRepository)) {
+        if (controllerUtil.isInvalidToken(accessToken)) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
             );
         }
 
-        Subscription subscription = this.getSubscriptionByEndpoint(subscriptionEndpoint);
+        Device subscription = controllerUtil.getSubscriptionByEndpoint(subscriptionEndpoint, accessToken);
         if (subscription != null) {
-            boolean hasFailed = this.sendTextPushMessage(subscription, new PushMessage("Text Notification", message));
-            if (!hasFailed) {
-                return new ResponseEntity<>(
-                    new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Push text message sent").getJSON(),
-                    HttpStatus.OK
-                );
-            } else {
+
+            PushMessage msg = new PushMessage();
+            msg.setTitle("Text Notification");
+            msg.setBody(message);
+
+            boolean deleteSubscription = this.sendTextPushMessage(subscription, msg);
+            if (deleteSubscription) {
+                controllerUtil.removeSubscription(subscriptionEndpoint, accessToken);
                 return new ResponseEntity<>(
                     new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Could not sent push message, subscription gone?").getJSON(),
                     HttpStatus.INTERNAL_SERVER_ERROR
                 );
             }
+
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Push text message sent").getJSON(),
+                HttpStatus.OK
+            );
+
         } else {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No or unknown subscription endpoint provided").getJSON(),
@@ -502,7 +350,11 @@ public class PushMsgController {
     }
      */
 
-    private boolean sendTextPushMessage(Subscription subscription, PushMessage message) {
+    /**
+     * @return true if the subscription is no longer valid and can be removed, false if
+     * everything is okay
+     */
+    private boolean sendTextPushMessage(Device device, PushMessage message) {
 
         /*
         Notification notification = new Notification("Custom Text Notification");
@@ -520,23 +372,23 @@ public class PushMsgController {
              */
             result = this.cryptoService.encrypt(
                 this.objectMapper.writeValueAsString(message),
-                subscription.getKeys().getP256dh(), subscription.getKeys().getAuth(), 0);
+                device.getP256dh(), device.getAuth(), 0);
 
         } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidKeySpecException | InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException | JsonProcessingException e) {
             PushrApplication.logger.error("Error encrypting message: ", e);
         }
 
-        return sendPushMessage(subscription, result);
+        return sendPushMessage(device, result);
     }
 
     /**
      * @return true if the subscription is no longer valid and can be removed, false if
      * everything is okay
      */
-    private boolean sendPushMessage(Subscription subscription, byte[] body) {
+    private boolean sendPushMessage(Device device, byte[] body) {
         String origin;
         try {
-            URL url = new URL(subscription.getEndpoint());
+            URL url = new URL(device.getEndpoint());
             origin = url.getProtocol() + "://" + url.getHost();
         } catch (MalformedURLException e) {
             PushrApplication.logger.error("create origin", e);
@@ -549,7 +401,7 @@ public class PushMsgController {
         String token = JWT.create().withAudience(origin).withExpiresAt(expires)
             .withSubject("mailto:example@example.com").sign(this.jwtAlgorithm);
 
-        URI endpointURI = URI.create(subscription.getEndpoint());
+        URI endpointURI = URI.create(device.getEndpoint());
 
         // HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder();
 
@@ -592,9 +444,9 @@ public class PushMsgController {
                 case 404:
                 case 410:
                     PushrApplication.logger.warn("Subscription not found or gone: {}",
-                        subscription.getEndpoint());
+                        device.getEndpoint());
                     // remove subscription from our collection of subscriptions
-                    removeSubscription(subscription);
+                    // removeSubscription(pushSubscription);
                     return true;
                 case 429:
                     PushrApplication.logger.error("Too many requests: {}", response.toString());
@@ -618,12 +470,12 @@ public class PushMsgController {
         switch (response.getStatusCodeValue()) {
             case 201:
                 PushrApplication.logger.info("Push message successfully sent: {}",
-                    subscription.getEndpoint());
+                    device.getEndpoint());
                 break;
             case 404:
             case 410:
                 PushrApplication.logger.warn("Subscription not found or gone: {}",
-                    subscription.getEndpoint());
+                    device.getEndpoint());
                 // remove subscription from our collection of subscriptions
                 return true;
             case 429:
@@ -644,17 +496,4 @@ public class PushMsgController {
         return false;
     }
 
-    private void removeSubscription(Subscription subscription) {
-        this.subscriptions.remove(subscription.getEndpoint());
-    }
-
-    private Subscription getSubscriptionByEndpoint(String subscriptionEndpoint) {
-        for (Subscription subscription : this.subscriptions.values()) {
-            if (subscription.getEndpoint().equals(subscriptionEndpoint)) {
-                return subscription;
-            }
-        }
-        PushrApplication.logger.error("no subscription found for endpoind {}", subscriptionEndpoint);
-        return null;
-    }
 }
