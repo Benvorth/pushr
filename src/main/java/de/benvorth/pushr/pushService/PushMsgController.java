@@ -110,7 +110,7 @@ public class PushMsgController {
         produces = "application/json"
     )
     public ResponseEntity<String> push(
-        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
+        // @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
         @RequestParam(name="token", required = true) String token,
         @RequestParam(name="bat", required = false) String bat, // Batteriespannung
         @RequestParam(name="per", required = false) String per, // Batteriekapazität in %
@@ -128,12 +128,13 @@ public class PushMsgController {
         @RequestParam(name="swver", required = false) String swver, // SW-version
         @RequestParam(name="hwver", required = false) String hwver // HW-version
     ) {
+        /*
         if (controllerUtil.isInvalidToken(accessToken)) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
             );
-        }
+        }*/
 
         PushrApplication.logger.info(
             "++++received push: \n" +
