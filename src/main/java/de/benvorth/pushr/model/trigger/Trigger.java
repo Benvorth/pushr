@@ -9,6 +9,7 @@ import lombok.Setter;
 import javax.persistence.*;
 
 @Entity
+@Table(name="\"trigger\"")
 @NoArgsConstructor
 @Setter
 @Getter
@@ -20,7 +21,7 @@ public class Trigger {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "trigger_id")
+    @Column(name = "\"trigger_id\"")
     private Long triggerId;
 
     private String  name;
