@@ -26,7 +26,7 @@ public class Housekeeping {
         this.accessTokenRepository = accessTokenRepository;
     }
 
-    @Scheduled(fixedDelay = 20_000)
+    // @Scheduled(fixedDelay = 20_000)
     public void cleanupAccessTokens() {
 
         List<AccessToken> toBeDeleted = accessTokenRepository.findByExpiresLessThan(System.currentTimeMillis());

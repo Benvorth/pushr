@@ -9,7 +9,10 @@ import java.util.List;
 @Repository
 public interface DeviceRespository extends CrudRepository<Device, Long> {
 
-    List<Device> findByUser(User user);
-    List<Device> findByEndpointAndUser(String endpoint, User user);
+    boolean existsDeviceByEndpointAndUserId(String endpoint, Long userId);
+
+    List<Device> findByUserId(Long userId);
+    List<Device> findByUuidAndUserId(String uuid, Long userId);
+    List<Device> findByEndpointAndUserId(String endpoint, Long userId);
 
 }

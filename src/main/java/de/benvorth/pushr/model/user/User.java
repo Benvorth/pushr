@@ -1,13 +1,12 @@
 package de.benvorth.pushr.model.user;
 
 import de.benvorth.pushr.model.device.Device;
-import de.benvorth.pushr.model.trigger.Trigger;
+import de.benvorth.pushr.model.event.Event;
 import lombok.*;
 
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 // https://www.javatpoint.com/spring-boot-jpa
 // https://bezkoder.com/spring-boot-jpa-h2-example/
@@ -34,27 +33,38 @@ public class User {
     private long firstLogin;
     private long lastSeen;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    /*@OneToOne(
+        mappedBy = "user",
+        fetch = FetchType.LAZY,
+        optional = true // avoid eager fetching, see https://thorben-janssen.com/hibernate-tip-lazy-loading-one-to-one/
+    )
+    @OneToOne(
+        mappedBy = "user",
+        fetch = FetchType.LAZY
+    )
     @JoinColumn(name = "access_token_id", referencedColumnName = "access_token_id")
     private AccessToken accessToken;
+*/
 
+    /*
     // https://vladmihalcea.com/the-best-way-to-map-a-onetomany-association-with-jpa-and-hibernate/
     @OneToMany(
         mappedBy="user", // var name in the "many" part
-        cascade = CascadeType.ALL,
-        orphanRemoval = true,
+        // cascade = CascadeType.ALL, // all the JPA and Hibernate entity state transitions (e.g., persist, merge, remove) are passed from the parent "User" entity to the "Device" child entities.
+        // orphanRemoval = true, //  instruct the JPA provider to trigger a remove entity state transition when a PostComment entity is no longer referenced by its parent Post entity.
         fetch = FetchType.LAZY
     )
     // @JoinColumn(name="device_id")
     private List<Device> devices = new ArrayList<>();
-
+*/
     @OneToMany(
         mappedBy="user", // var name in the "many" part
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
+        // cascade = CascadeType.ALL,
+        // orphanRemoval = true,
+        fetch = FetchType.LAZY
     )
     // @OneToMany(mappedBy="user")
-    private List<Trigger> triggers = new ArrayList<>();
+    private List<Event> events = new ArrayList<>();
 
     public User (String providerId, String idProvider, String name, String locale, String avatarUrl) {
         this.providerId = providerId;
@@ -98,9 +108,14 @@ public class User {
             "\"avatarUrl\":\"" + this.getAvatarUrl() + "\"," +
             "\"firstLogin\":" + this.getFirstLogin() + "," +
             "\"lastSeen\":" + this.getLastSeen() + "," +
-            "\"access_token_id\":" + this.getAccessToken().getAccessTokenId() + "" +
+            // "\"access_token_id\":" + this.getAccessToken().getAccessTokenId() + "" +
             // "\"device_ids\":" + this.getDevices().forEach(device -> {return device.getDeviceId();}).getDeviceId() + "" +
         "}";
     }
 
+
+    // https://www.baeldung.com/spring-data-jpa-projections
+    public interface UserView_userId {
+        long getUserId();
+    }
 }

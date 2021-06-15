@@ -8,6 +8,7 @@ import java.util.List;
 
 // https://developer.mozilla.org/en-US/docs/Web/API/notification
 // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration/showNotification
+// https://firebase.google.com/docs/cloud-messaging/http-server-ref
 @NoArgsConstructor
 @Getter @Setter
 public class PushMessage {

@@ -1,20 +1,16 @@
 package de.benvorth.pushr.basicService;
 
-import com.auth0.jwt.algorithms.Algorithm;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.benvorth.pushr.PushrApplication;
 import de.benvorth.pushr.model.PushrHTTPresult;
 import de.benvorth.pushr.model.device.Device;
 import de.benvorth.pushr.model.device.DeviceRespository;
 import de.benvorth.pushr.model.device.client.ClientPushMsgSubscription;
 import de.benvorth.pushr.model.user.*;
-import de.benvorth.pushr.pushService.CryptoService;
-import de.benvorth.pushr.pushService.ServerKeys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
@@ -43,6 +39,7 @@ public class DeviceController {
         this.controllerUtil = controllerUtil;
     }
 
+    @Transactional
     @RequestMapping(
         method = RequestMethod.POST,
         path = "/register",
@@ -51,54 +48,66 @@ public class DeviceController {
     public ResponseEntity<String> register(
         @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
         @RequestParam("device_name") String deviceName,
+        @RequestParam("uuid") String uuid,
         @RequestParam("device_type") String deviceType,
         @RequestBody ClientPushMsgSubscription clientSubscription
     ) {
-        if (controllerUtil.isInvalidToken(accessToken)) {
+        PushrApplication.logger.info("++ This is api/device/register");
+        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
+        if (userId == null) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
             );
         }
-        AccessToken accessTokenObj = accessTokenRepository.findByToken(accessToken).get(0);
-        User user = accessTokenObj.getUser();
-        // User user = userRepository.findById(accessTokenObj.getUser().getUserId()).get();
-
-        Device device;
         List<Device> existingDevices =
-            deviceRespository.findByEndpointAndUser(clientSubscription.getEndpoint(), user);
-        if (existingDevices.size() == 1) {
-            device = existingDevices.get(0);
+            deviceRespository.findByUuidAndUserId(uuid, userId);
+        if (existingDevices.size() == 0) {
+            Device device = new Device(
+                userId,
+                uuid,
+                deviceName,
+                deviceType,
+                clientSubscription.getEndpoint(),
+                (clientSubscription.getExpirationTime() != null ? clientSubscription.getExpirationTime() : 0),
+                clientSubscription.getKeys().getP256dh(),
+                clientSubscription.getKeys().getAuth()
+            );
+            deviceRespository.save(device);
         } else if (existingDevices.size() > 1) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "More than one device found for this endpoint").getJSON(),
                 HttpStatus.BAD_REQUEST
             );
         } else {
-            device = new Device(
-                deviceName,
-                deviceType,
-                clientSubscription.getEndpoint(),
-                (clientSubscription.getExpirationTime() != null ? clientSubscription.getExpirationTime() : 0),
-                clientSubscription.getKeys().getP256dh(),
-                clientSubscription.getKeys().getAuth(),
-                user
-            );
-            deviceRespository.save(device); // save "passive" side first
+            PushrApplication.logger.info("Device already exists, check for required updates");
+            Device existingDevice = existingDevices.get(0);
+            if (!deviceName.equals(existingDevice.getName())) {
+                existingDevice.setName(deviceName);
+            }
+            if (!deviceType.equals(existingDevice.getDeviceType())) {
+                existingDevice.setDeviceType(deviceType);
+            }
+            if (!clientSubscription.getEndpoint().equals(existingDevice.getEndpoint())) {
+                existingDevice.setName(clientSubscription.getEndpoint());
+            }
+            if (!clientSubscription.getKeys().getP256dh().equals(existingDevice.getP256dh())) {
+                existingDevice.setP256dh(clientSubscription.getKeys().getP256dh());
+            }
+            if (!clientSubscription.getKeys().getAuth().equals(existingDevice.getAuth())) {
+                existingDevice.setAuth(clientSubscription.getKeys().getAuth());
+            }
         }
-        // user.addDevice(device); // update "owning" side
-        // userRepository.save(user); // save "owning" side
-
         String subscriptionId = createHash(clientSubscription);
 
-        // this.subscriptions.put(subscription.getEndpoint(), subscription);
-        // this.subscriptionsById.put(subscriptionId, subscription);
+        PushrApplication.logger.info("++ api/device/register done");
         return new ResponseEntity<>(
             "{\"subscriptionId\":\"" + subscriptionId + "\"}",
             HttpStatus.CREATED
         );
     }
 
+    @Transactional
     @RequestMapping(
         method = RequestMethod.POST,
         path = "/unregister",
@@ -106,38 +115,47 @@ public class DeviceController {
     )
     public ResponseEntity<String> unsubscribe(
         @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        // @RequestBody SubscriptionEndpoint subscription
         @RequestBody String subscriptionEndpoint
     ) {
-        if (controllerUtil.isInvalidToken(accessToken)) {
+        PushrApplication.logger.info("++ This is api/device/unregister");
+        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
+        if (userId == null) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
             );
         }
 
-        Device device = controllerUtil.getSubscriptionByEndpoint(subscriptionEndpoint, accessToken);
-        if (device == null) {
+        List<Device> existingDevices =
+            deviceRespository.findByEndpointAndUserId(subscriptionEndpoint, userId);
+        if (existingDevices.size() == 0) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "Unable to find subscription with the given endpoint").getJSON(),
                 HttpStatus.BAD_REQUEST
             );
+        } else if (existingDevices.size() > 1) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "More than one device found for this endpoint").getJSON(),
+                HttpStatus.BAD_REQUEST
+            );
         } else {
 
+            Device device = existingDevices.get(0);
             deviceRespository.delete(device);
 
             // todo check if this was successful
 
             PushrApplication.logger.info("Subscription for push messages removed from server");
             // return this.sendTextPushMessage(subscription, new PushMessage("Text Notification", message));
+            PushrApplication.logger.info("++ api/device/unregister done");
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Subscription for push messages removed from server").getJSON(),
                 HttpStatus.OK
             );
-
         }
     }
 
+    @Transactional(readOnly=true)
     @RequestMapping(
         method = RequestMethod.POST,
         path = "/is_known",
@@ -146,29 +164,32 @@ public class DeviceController {
     public ResponseEntity<String> isSubscribed(
         @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
 //         @RequestBody SubscriptionEndpoint subscriptionEndpoint
-        @RequestBody String subscriptionEndpoint
+        @RequestBody String deviceEndpoint
     ) {
-        if (controllerUtil.isInvalidToken(accessToken)) {
+        PushrApplication.logger.info("++ This is api/device/is_known");
+        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
+        if (userId == null) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
             );
         }
 
-        User user = userRepository.findByAccessToken_Token(accessToken).get(0);
-        boolean isSubscribed = false;
-        List<Device> devices = deviceRespository.findByEndpointAndUser(subscriptionEndpoint, user);
-        if (devices.size() > 1) {
+        // User user = accessTokenRepository.findUserByToken(accessToken); // .findByAccessToken_Token(accessToken).get(0);
+        boolean deviceIsKnown = deviceRespository.existsDeviceByEndpointAndUserId(deviceEndpoint, userId);
+        // List<Device> devices = deviceRespository.findByEndpointAndUserId(deviceEndpoint, userId);
+        /*if (devices.size() > 1) {
             return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "More than one subscriptions found for the given endpoint").getJSON(),
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "More than one device found for the given endpoint").getJSON(),
                 HttpStatus.BAD_REQUEST
             );
         } else if (devices.size() == 1) {
             isSubscribed = true;
-        }
+        }*/
 
+        PushrApplication.logger.info("++ api/device/is_known done");
         return new ResponseEntity<>(
-            "{\"status\":\"" + PushrHTTPresult.STATUS_SUCCESS + "\",\"msg\":" + (isSubscribed ? "true": "false") + "}",
+            "{\"status\":\"" + PushrHTTPresult.STATUS_SUCCESS + "\",\"msg\":" + (deviceIsKnown ? "true": "false") + "}",
             HttpStatus.OK
         );
     }

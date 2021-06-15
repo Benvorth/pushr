@@ -1,5 +1,6 @@
 package de.benvorth.pushr;
 
+import de.benvorth.pushr.model.BaseRepositoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 // @EnableJpaRepositories("de.benvorth.pushr")
 // @EntityScan("de.benvorth.pushr")
+@EnableJpaRepositories(repositoryBaseClass = BaseRepositoryImpl.class)
 public class PushrApplication {
 
 	public final static Logger logger = LoggerFactory.getLogger(PushrApplication.class);

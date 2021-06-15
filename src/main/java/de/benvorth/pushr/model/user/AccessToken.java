@@ -23,19 +23,24 @@ public class AccessToken {
 
     // mappedBy: To declare a side as not responsible for the FK-relationship.
     // Value: the variable name of this class instance on the owner side
-    @OneToOne(mappedBy = "accessToken")
+    @OneToOne(
+        // mappedBy = "accessToken",
+        fetch = FetchType.LAZY
+    )
+    @JoinColumn(name="user_id") // uni-directional association
     private User user;
 
-    public AccessToken (String token, long created, long expires) {
-
+    public AccessToken (String token, long created, long expires, User user) {
         this.setToken(token);
         this.setCreated(created);
         this.setExpires(expires);
+        this.setUser(user);
     }
 
     public String toJson () {
         return "{" +
             "\"access_token_id\":" + this.getAccessTokenId() + "," +
+            "\"user_id\":" + this.getUser().getUserId() + "," +
             "\"token\":\"" + this.getToken() + "\"," +
             "\"created\":" + this.getCreated() + "," +
             "\"expires\":" + this.getExpires() + "" +

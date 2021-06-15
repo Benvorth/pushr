@@ -9,8 +9,8 @@ import de.benvorth.pushr.basicService.ControllerUtil;
 import de.benvorth.pushr.model.PushrHTTPresult;
 import de.benvorth.pushr.model.device.Device;
 import de.benvorth.pushr.model.device.DeviceRespository;
-import de.benvorth.pushr.model.trigger.Trigger;
-import de.benvorth.pushr.model.trigger.TriggerRepository;
+import de.benvorth.pushr.model.event.Event;
+import de.benvorth.pushr.model.event.EventRepository;
 import de.benvorth.pushr.model.user.*;
 import de.benvorth.pushr.model.message.PushMessage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +18,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -54,7 +55,7 @@ public class PushMsgController {
     UserRepository userRepository;
     AccessTokenRepository accessTokenRepository;
     DeviceRespository deviceRespository;
-    TriggerRepository triggerRepository;
+    EventRepository eventRepository;
     ControllerUtil controllerUtil;
 
     @Autowired
@@ -64,7 +65,7 @@ public class PushMsgController {
         UserRepository userRepository,
         AccessTokenRepository accessTokenRepository,
         DeviceRespository deviceRespository,
-        TriggerRepository triggerRepository,
+        EventRepository eventRepository,
         ControllerUtil controllerUtil
     ) {
         this.serverKeys = serverKeys;
@@ -78,11 +79,12 @@ public class PushMsgController {
         this.userRepository = userRepository;
         this.accessTokenRepository = accessTokenRepository;
         this.deviceRespository = deviceRespository;
-        this.triggerRepository = triggerRepository;
+        this.eventRepository = eventRepository;
         this.controllerUtil = controllerUtil;
     }
 
 
+    @Transactional(readOnly = true)
     @RequestMapping(
         method = RequestMethod.GET,
         path = "/publicSigningKey",
@@ -91,9 +93,11 @@ public class PushMsgController {
     public byte[] publicSigningKey(
         @RequestHeader("x-pushr-access-token") String accessToken // if not present: result is 400 - Bad Request
     ) {
+        PushrApplication.logger.info("++ api/publicSigningKey");
         if (controllerUtil.isInvalidToken(accessToken)) {
             return null;
         }
+        PushrApplication.logger.info("++ api/publicSigningKey done");
         return this.serverKeys.getPublicKeyUncompressed();
     }
 
@@ -111,7 +115,7 @@ public class PushMsgController {
     )
     public ResponseEntity<String> push(
         // @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        @RequestParam(name="token", required = true) String token,
+        @RequestParam(name="trigger", required = true) String trigger,
         @RequestParam(name="bat", required = false) String bat, // Batteriespannung
         @RequestParam(name="per", required = false) String per, // Batteriekapazität in %
         @RequestParam(name="mac", required = false) String mac, // MAC Adresse des Buttons (WiFi)
@@ -128,6 +132,8 @@ public class PushMsgController {
         @RequestParam(name="swver", required = false) String swver, // SW-version
         @RequestParam(name="hwver", required = false) String hwver // HW-version
     ) {
+
+        PushrApplication.logger.info("++ api/push");
         /*
         if (controllerUtil.isInvalidToken(accessToken)) {
             return new ResponseEntity<>(
@@ -138,7 +144,7 @@ public class PushMsgController {
 
         PushrApplication.logger.info(
             "++++received push: \n" +
-                "    token {}\n" +
+                "    trigger {}\n" +
                 "    Batteriespannung {}\n" +
                 "    Batteriekapazität in % {}\n" +
                 "    MAC Adresse des Buttons (WiFi) {}\n" +
@@ -155,7 +161,7 @@ public class PushMsgController {
                 "    SW-version {}\n" +
                 "    HW-version {}",
 
-            token,
+            trigger,
             (bat != null ? bat : "null"),
             (per != null ? per : "null"),
             (mac != null ? mac : "null"),
@@ -173,22 +179,23 @@ public class PushMsgController {
             (hwver != null ? hwver : "null")
         );
 
-        List<Trigger> triggers = triggerRepository.findByToken(token);
-        for (Trigger trigger : triggers) {
+        List<Event> events = eventRepository.findByTrigger(trigger);
+        for (Event event : events) {
 
-            List<Device> devices = deviceRespository.findByUser(trigger.getUser());
+            List<Device> devices = deviceRespository.findByUserId(event.getUser().getUserId());
             for (Device device : devices) {
                 PushMessage msg = new PushMessage();
                 msg.setTitle("Text Notification");
                 msg.setBody(
-                    "Hi from token " + token + "\n" +
-                    "(Fired by trigger '" + trigger.getName() + "')"
+                    " " + event.getName() + "\n" +
+                    "(Fired by trigger '" + trigger + "')"
                 );
-                boolean deleteDevice = this.sendTextPushMessage(device, msg);
+                boolean unableToDeliver = this.sendTextPushMessage(device, msg);
 
             }
         }
 
+        PushrApplication.logger.info("++ api/push done");
         return new ResponseEntity<>(
             new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "push message sent").getJSON(),
             HttpStatus.OK
@@ -207,14 +214,16 @@ public class PushMsgController {
         @RequestBody String message
     ) {
 
-        if (controllerUtil.isInvalidToken(accessToken)) {
+        PushrApplication.logger.info("++ api/sendTextNotification");
+        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
+        if (userId == null) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
                 HttpStatus.UNAUTHORIZED
             );
         }
 
-        Device subscription = controllerUtil.getSubscriptionByEndpoint(subscriptionEndpoint, accessToken);
+        Device subscription = controllerUtil.getDeviceByEndpoint(subscriptionEndpoint, userId);
         if (subscription != null) {
 
             PushMessage msg = new PushMessage();
@@ -223,13 +232,14 @@ public class PushMsgController {
 
             boolean deleteSubscription = this.sendTextPushMessage(subscription, msg);
             if (deleteSubscription) {
-                controllerUtil.removeSubscription(subscriptionEndpoint, accessToken);
+                controllerUtil.removeDevice(subscriptionEndpoint, userId);
                 return new ResponseEntity<>(
                     new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Could not sent push message, subscription gone?").getJSON(),
                     HttpStatus.INTERNAL_SERVER_ERROR
                 );
             }
 
+            PushrApplication.logger.info("++ api/sendTextNotification done");
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Push text message sent").getJSON(),
                 HttpStatus.OK
@@ -439,6 +449,7 @@ public class PushMsgController {
             response = this.httpClient.postForEntity(
                 endpointURI, entity, String.class);
         } catch (HttpClientErrorException e) {
+            PushrApplication.logger.info("Error response: '" + response.toString() + "'");
 
             switch (e.getRawStatusCode()) {
 
@@ -468,6 +479,8 @@ public class PushMsgController {
         // HttpResponse<Void> response = this.httpClient.send(request,
         //     HttpResponse.BodyHandlers.discarding());
 
+        // todo https://firebase.google.com/docs/cloud-messaging/http-server-ref#interpret-downstream
+        PushrApplication.logger.info("Push msg response: '" + response.toString() + "'");
         switch (response.getStatusCodeValue()) {
             case 201:
                 PushrApplication.logger.info("Push message successfully sent: {}",

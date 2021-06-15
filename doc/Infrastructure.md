@@ -60,10 +60,13 @@ install Jenkins:
 * Default jenkins home-dir: /var/lib/jenkins
 * Pipeline-home: /var/lib/jenkins/workspace/<pipeline-name>/
 
-* Configure "Automatic Mode" for GitHub hook trigger for GITScm polling (https://plugins.jenkins.io/github/):
+* Configure "Automatic Mode" for GitHub hook event for GITScm polling (https://plugins.jenkins.io/github/):
 Dashboard -> Configure Jenkins -> Configure System -> Scroll down to "GitHub", Add gitHub Server, User personal Access Token from GitHub (self-service there), create credentials as «Secret Text», -> check "Manage hooks"
-* In your pipeline configure "Build Triggers" as "GitHub hook trigger for GITScm polling"
+* In your pipeline configure "Build Triggers" as "GitHub hook event for GITScm polling"
 * As "Pipeline" select "Pipeline Scripte from SCM". Make sure to check out "*/main" (not "*/master"), Script path is "Jenkinsfile".
+
+* see logfiles:
+  tail -f /var/lib/jenkins/workspace/PUSHr-pipeline2/logs/spring-boot-logger.log
 
 
 install nginx
