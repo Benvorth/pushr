@@ -57,6 +57,7 @@ public class User {
     // @JoinColumn(name="device_id")
     private List<Device> devices = new ArrayList<>();
 */
+    /*
     @OneToMany(
         mappedBy="user", // var name in the "many" part
         // cascade = CascadeType.ALL,
@@ -65,6 +66,7 @@ public class User {
     )
     // @OneToMany(mappedBy="user")
     private List<Event> events = new ArrayList<>();
+     */
 
     public User (String providerId, String idProvider, String name, String locale, String avatarUrl) {
         this.providerId = providerId;

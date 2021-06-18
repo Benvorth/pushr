@@ -11,9 +11,11 @@ import de.benvorth.pushr.model.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(path = "api/event")
@@ -40,6 +42,7 @@ public class EventController {
         this.controllerUtil = controllerUtil;
     }
 
+    @Transactional(readOnly = true)
     @RequestMapping(
         method = RequestMethod.GET,
         path = "/get_new_trigger",
@@ -65,7 +68,6 @@ public class EventController {
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         } else {
-            // todo claim trigger for this user
             PushrApplication.logger.info("++ api/event/get_new_trigger done");
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, newTrigger).getJSON(),
@@ -74,17 +76,18 @@ public class EventController {
         }
     }
 
+    @Transactional
     @RequestMapping(
         method = RequestMethod.POST,
-        path = "/create_event",
+        path = "/save_event",
         produces = "application/json"
     )
     public ResponseEntity<String> rest_createEvent(
         @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
+        @RequestParam(name="event_id", required = false) Long eventId,
         @RequestParam(name="trigger", required = false) String trigger,
         @RequestParam("event_name") String eventName,
         @RequestParam("trigger_active") Boolean triggerActive,
-
         @RequestParam("subscribe") Boolean subscribe
     ) {
         PushrApplication.logger.info("++ api/event/create_event");
@@ -96,40 +99,123 @@ public class EventController {
             );
         }
 
-        User user = accessTokenRepository.findUserByToken(accessToken); // .findByAccessToken_Token(accessToken).get(0);
-
-        if (trigger == null) {
-            trigger = controllerUtil.generateNewTrigger();
-        }
-
-        if (controllerUtil.isTriggerAssociatedWithEvent(trigger)) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "given trigger already associated with an event").getJSON(),
-                HttpStatus.BAD_REQUEST
-            );
-        }
-
         // todo fill event_permission
 
-        Event newEvent = new Event(
-            eventName,
-            System.currentTimeMillis(),
-            trigger,
-            triggerActive,
-            user
-        );
-        eventRepository.save(newEvent);
+        Event newEvent;
+        if (eventId == null) {
+            if (controllerUtil.isTriggerAssociatedWithEvent(trigger)) {
+                return new ResponseEntity<>(
+                    new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "given trigger already associated with an event").getJSON(),
+                    HttpStatus.BAD_REQUEST
+                );
+            }
 
-        PushrApplication.logger.info("Event {} created successfully", newEvent.getEventId());
-        // return this.sendTextPushMessage(subscription, new PushMessage("Text Notification", message));
+            if (trigger == null) {
+                trigger = controllerUtil.generateNewTrigger();
+            }
+
+            newEvent = new Event(
+                eventName,
+                userId,
+                System.currentTimeMillis(),
+                trigger,
+                triggerActive
+            );
+            eventRepository.save(newEvent);
+            PushrApplication.logger.info("Event {} created successfully", newEvent.getEventId());
+
+        } else {
+            // updat existing event
+            Optional<Event> optionalEvent = eventRepository.findById(eventId);
+            if (!optionalEvent.isPresent()) {
+                return new ResponseEntity<>(
+                    new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No event found by the given eventId").getJSON(),
+                    HttpStatus.BAD_REQUEST
+                );
+            } else {
+                newEvent = optionalEvent.get();
+                if (newEvent.getUserId() != userId) {
+                    return new ResponseEntity<>(
+                        new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "This user is not allowed to modify the given event").getJSON(),
+                        HttpStatus.UNAUTHORIZED
+                    );
+                }
+
+                if (trigger != null && !trigger.equals(newEvent.getTrigger())) {
+                    newEvent.setTrigger(trigger);
+                }
+                if(!eventName.equals(newEvent.getName())) {
+                    newEvent.setName(eventName);
+                }
+                if (triggerActive != newEvent.getTriggerActive()) {
+                    newEvent.setTriggerActive(triggerActive);
+                }
+            }
+
+        }
 
         if (subscribe) {
             // todo subscribe this user to the event
         }
 
-        PushrApplication.logger.info("++ api/event/create_event done");
+        PushrApplication.logger.info("++ api/event/save_event done");
         return new ResponseEntity<>(
-            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Event created").getJSON(),
+            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS,
+                "Event created",
+                newEvent.toJson(true, subscribe)
+            ).getJSON(),
+            HttpStatus.CREATED
+        );
+    }
+
+    @Transactional
+    @RequestMapping(
+        method = RequestMethod.POST,
+        path = "/delete_event",
+        produces = "application/json"
+    )
+    public ResponseEntity<String> rest_deleteEvent(
+        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
+        @RequestParam("event_id") Long eventId
+    ) {
+        PushrApplication.logger.info("++ api/event/delete_event");
+        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
+        if (userId == null) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
+                HttpStatus.UNAUTHORIZED
+            );
+        }
+
+        Optional<Event> eventOptional = eventRepository.findById(eventId);
+        if (!eventOptional.isPresent()) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR,
+                    "given event_id not found").getJSON(),
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        Event event = eventOptional.get();
+        if (event.getUserId() != userId) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR,
+                    "This user may not delete this event").getJSON(),
+                HttpStatus.UNAUTHORIZED
+            );
+        }
+
+        eventRepository.delete(event);
+
+        PushrApplication.logger.info("Event {} deleted successfully", event.getEventId());
+
+
+        PushrApplication.logger.info("++ api/event/delete_event done");
+        return new ResponseEntity<>(
+            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS,
+                "Event deleted",
+                "{\"event_id\":" + event.getEventId() + "}"
+            ).getJSON(),
             HttpStatus.CREATED
         );
     }
@@ -186,10 +272,9 @@ public class EventController {
                 HttpStatus.UNAUTHORIZED
             );
         }
-        User user = accessTokenRepository.findUserByToken(accessToken); // .findByAccessToken_Token(accessToken).get(0);
 
         // owned events
-        List<Event> events_owned = eventRepository.findByUser(user);
+        List<Event> events_owned = eventRepository.findByUserId(userId);
         PushrApplication.logger.info("Found {} events owned by this user", events_owned.size());
 
         // todo get events_subscribed

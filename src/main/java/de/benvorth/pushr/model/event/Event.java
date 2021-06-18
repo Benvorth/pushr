@@ -18,29 +18,34 @@ public class Event {
     @Column(name = "event_id")
     private Long eventId;
 
+    private Long userId;
+
     private String  name;
     private long created;
     private long lastTriggered;
     private String trigger;
     private Boolean triggerActive;
 
+    /*
     // this is the creater (=owner) of the event.
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // do not set this to EAGER!
     @JoinColumn(name="user_id", nullable = false)
     private User user;
+     */
 
-    public Event(String name, long created, String trigger, Boolean triggerActive, User user) {
+    public Event(String name, long userId, long created, String trigger, Boolean triggerActive) {
         this.name = name;
+        this.userId = userId;
         this.created = created;
         this.lastTriggered = -1;
         this.trigger = trigger;
         this.triggerActive = triggerActive;
-        this.user = user;
     }
 
     public String toJson () {
         return "{" +
             "\"event_id\":" + this.getEventId() + "," +
+            "\"user_id\":" + this.getUserId() + "," +
             "\"name\":\"" + this.getName() + "\"," +
             "\"created\":" + this.getCreated() + "," +
             "\"last_triggered\":" + this.getLastTriggered() + "," +
@@ -51,16 +56,14 @@ public class Event {
 
     public String toJson (boolean owned, boolean subscribed) {
         return "{" +
-            "\"event_id\":" + this.getEventId() + "," +
+            "\"eventId\":" + this.getEventId() + "," +
             "\"name\":\"" + this.getName() + "\"," +
             "\"created\":" + this.getCreated() + "," +
-            "\"last_triggered\":" + this.getLastTriggered() + "," +
+            "\"lastTriggered\":" + this.getLastTriggered() + "," +
             "\"trigger\":\"" + this.getTrigger() + "\"," +
-            "\"trigger_active\":" + this.getTriggerActive() + "" +
-            "\"owned\":" + owned + "" +
+            "\"triggerActive\":" + this.getTriggerActive() + "," +
+            "\"owned\":" + owned + "," +
             "\"subscribed\":" + subscribed + "" +
             "}";
     }
-
-
 }

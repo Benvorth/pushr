@@ -182,7 +182,7 @@ public class PushMsgController {
         List<Event> events = eventRepository.findByTrigger(trigger);
         for (Event event : events) {
 
-            List<Device> devices = deviceRespository.findByUserId(event.getUser().getUserId());
+            List<Device> devices = deviceRespository.findByUserId(event.getUserId());
             for (Device device : devices) {
                 PushMessage msg = new PushMessage();
                 msg.setTitle("Text Notification");

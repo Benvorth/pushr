@@ -17,4 +17,8 @@ public class Html5PathsController {
     public String redirectToken() {
         return "forward:/index.html";
     }
+    @RequestMapping(value = "/trigger/{[path:[^\\.]*}")
+    public String redirectTrigger() {
+        return "forward:/index.html";
+    }
 }
