@@ -1,7 +1,6 @@
 package de.benvorth.pushr.model.user;
 
 import de.benvorth.pushr.model.BaseRepository;
-import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

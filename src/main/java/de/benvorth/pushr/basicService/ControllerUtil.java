@@ -5,6 +5,8 @@ import de.benvorth.pushr.model.device.Device;
 import de.benvorth.pushr.model.device.DeviceRespository;
 import de.benvorth.pushr.model.event.Event;
 import de.benvorth.pushr.model.event.EventRepository;
+import de.benvorth.pushr.model.subscription.Subscription;
+import de.benvorth.pushr.model.subscription.SubscriptionRepository;
 import de.benvorth.pushr.model.user.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,17 +22,20 @@ public class ControllerUtil {
     AccessTokenRepository accessTokenRepository;
     DeviceRespository deviceRespository;
     EventRepository eventRepository;
+    SubscriptionRepository subscriptionRepository;
 
     @Autowired
     public ControllerUtil(UserRepository userRepository,
                           AccessTokenRepository accessTokenRepository,
                           DeviceRespository deviceRespository,
-                          EventRepository eventRepository
+                          EventRepository eventRepository,
+                          SubscriptionRepository subscriptionRepository
     ) {
         this.userRepository = userRepository;
         this.accessTokenRepository = accessTokenRepository;
         this.deviceRespository = deviceRespository;
         this.eventRepository = eventRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
 
@@ -145,6 +150,31 @@ public class ControllerUtil {
             return tokens.get(0).getUser().getUserId();
         } else {
             return null;
+        }
+    }
+
+    public boolean subscribeUnsubscribeToEvent(boolean subscribe, long userId, long eventId) {
+
+        Subscription subscription = this.subscriptionRepository.findSubscriptionByUserIdAndEventId(userId, eventId);
+        if (!subscribe) {// unsubscribe
+            // check if we are subscribed
+            // boolean alreadySubscribed = this.subscriptionRepository.existsSubscriptionByUserIdAndEventId(userId, eventId);
+            if (subscription != null) {
+                this.subscriptionRepository.delete(subscription);
+                return true;
+            } else {
+                PushrApplication.logger.error("Not subscribed to event");
+                return false;
+            }
+        } else {
+            if (subscription == null) {
+                Subscription newSubscription = new Subscription(userId, eventId, System.currentTimeMillis());
+                this.subscriptionRepository.save(newSubscription);
+                return true;
+            } else {
+                PushrApplication.logger.error("Already subscribed to event");
+                return false;
+            }
         }
     }
 }

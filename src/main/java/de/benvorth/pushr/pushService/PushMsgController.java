@@ -108,6 +108,7 @@ public class PushMsgController {
     }*/
 
 
+    @Transactional
     @RequestMapping(
         method = RequestMethod.GET,
         path = "/push",
@@ -180,24 +181,35 @@ public class PushMsgController {
         );
 
         List<Event> events = eventRepository.findByTrigger(trigger);
-        for (Event event : events) {
-
-            List<Device> devices = deviceRespository.findByUserId(event.getUserId());
-            for (Device device : devices) {
-                PushMessage msg = new PushMessage();
-                msg.setTitle("Text Notification");
-                msg.setBody(
-                    " " + event.getName() + "\n" +
-                    "(Fired by trigger '" + trigger + "')"
-                );
-                boolean unableToDeliver = this.sendTextPushMessage(device, msg);
-
-            }
+        Event event;
+        if (events.size() == 0) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No event found for given token").getJSON(),
+                HttpStatus.BAD_REQUEST
+            );
         }
+
+        event = events.get(0);
+
+        // todo: check permissions to trigger this event
+
+        List<Device> devices = deviceRespository.findByUserId(event.getUserId());
+        for (Device device : devices) {
+            PushMessage msg = new PushMessage();
+            msg.setTitle("Text Notification");
+            msg.setBody(
+                " " + event.getName() + "\n" +
+                "(Fired by trigger '" + trigger + "')"
+            );
+            boolean unableToDeliver = this.sendTextPushMessage(device, msg);
+
+        }
+        event.setLastTriggered(System.currentTimeMillis());
+
 
         PushrApplication.logger.info("++ api/push done");
         return new ResponseEntity<>(
-            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "push message sent").getJSON(),
+            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Event triggered", event.toJson()).getJSON(),
             HttpStatus.OK
         );
     }
@@ -365,7 +377,7 @@ public class PushMsgController {
      * @return true if the subscription is no longer valid and can be removed, false if
      * everything is okay
      */
-    private boolean sendTextPushMessage(Device device, PushMessage message) {
+    public boolean sendTextPushMessage(Device device, PushMessage message) {
 
         /*
         Notification notification = new Notification("Custom Text Notification");
@@ -449,7 +461,10 @@ public class PushMsgController {
             response = this.httpClient.postForEntity(
                 endpointURI, entity, String.class);
         } catch (HttpClientErrorException e) {
-            PushrApplication.logger.info("Error response: '" + response.toString() + "'");
+            PushrApplication.logger.error("Error: '" + e + "'");
+            if (response != null) {
+                PushrApplication.logger.info("Error response: '" + response.toString() + "'");
+            }
 
             switch (e.getRawStatusCode()) {
 
@@ -459,6 +474,7 @@ public class PushMsgController {
                         device.getEndpoint());
                     // remove subscription from our collection of subscriptions
                     // removeSubscription(pushSubscription);
+                    deviceRespository.delete(device);
                     return true;
                 case 429:
                     PushrApplication.logger.error("Too many requests: {}", response.toString());

@@ -5,6 +5,8 @@ import de.benvorth.pushr.model.PushrHTTPresult;
 import de.benvorth.pushr.model.device.DeviceRespository;
 import de.benvorth.pushr.model.event.Event;
 import de.benvorth.pushr.model.event.EventRepository;
+import de.benvorth.pushr.model.subscription.Subscription;
+import de.benvorth.pushr.model.subscription.SubscriptionRepository;
 import de.benvorth.pushr.model.user.AccessTokenRepository;
 import de.benvorth.pushr.model.user.User;
 import de.benvorth.pushr.model.user.UserRepository;
@@ -26,6 +28,8 @@ public class EventController {
     AccessTokenRepository accessTokenRepository;
     DeviceRespository deviceRespository;
     EventRepository eventRepository;
+    SubscriptionRepository subscriptionRepository;
+
     ControllerUtil controllerUtil;
 
     @Autowired
@@ -33,12 +37,14 @@ public class EventController {
                            AccessTokenRepository accessTokenRepository,
                            DeviceRespository deviceRespository,
                            EventRepository eventRepository,
+                           SubscriptionRepository subscriptionRepository,
                            ControllerUtil controllerUtil
     ) {
         this.userRepository = userRepository;
         this.accessTokenRepository = accessTokenRepository;
         this.deviceRespository = deviceRespository;
         this.eventRepository = eventRepository;
+        this.subscriptionRepository = subscriptionRepository;
         this.controllerUtil = controllerUtil;
     }
 
@@ -76,6 +82,16 @@ public class EventController {
         }
     }
 
+    /**
+     * Create or update an event
+     * @param accessToken
+     * @param eventId
+     * @param trigger
+     * @param eventName
+     * @param triggerActive
+     * @param subscribe
+     * @return
+     */
     @Transactional
     @RequestMapping(
         method = RequestMethod.POST,
@@ -90,7 +106,7 @@ public class EventController {
         @RequestParam("trigger_active") Boolean triggerActive,
         @RequestParam("subscribe") Boolean subscribe
     ) {
-        PushrApplication.logger.info("++ api/event/create_event");
+        PushrApplication.logger.info("++ api/event/save_event");
         Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
         if (userId == null) {
             return new ResponseEntity<>(
@@ -102,7 +118,7 @@ public class EventController {
         // todo fill event_permission
 
         Event newEvent;
-        if (eventId == null) {
+        if (eventId == null) { // new Event
             if (controllerUtil.isTriggerAssociatedWithEvent(trigger)) {
                 return new ResponseEntity<>(
                     new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "given trigger already associated with an event").getJSON(),
@@ -124,8 +140,7 @@ public class EventController {
             eventRepository.save(newEvent);
             PushrApplication.logger.info("Event {} created successfully", newEvent.getEventId());
 
-        } else {
-            // updat existing event
+        } else { // updat existing event
             Optional<Event> optionalEvent = eventRepository.findById(eventId);
             if (!optionalEvent.isPresent()) {
                 return new ResponseEntity<>(
@@ -154,14 +169,13 @@ public class EventController {
 
         }
 
-        if (subscribe) {
-            // todo subscribe this user to the event
-        }
+        // handle subscription of user to event
+        controllerUtil.subscribeUnsubscribeToEvent(subscribe, userId, eventId);
 
         PushrApplication.logger.info("++ api/event/save_event done");
         return new ResponseEntity<>(
             new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS,
-                "Event created",
+                (eventId == null ? "Event created" : "Event updated"),
                 newEvent.toJson(true, subscribe)
             ).getJSON(),
             HttpStatus.CREATED
@@ -221,42 +235,6 @@ public class EventController {
     }
 
     @RequestMapping(
-        method = RequestMethod.POST,
-        path = "/subscribe_event",
-        produces = "application/json"
-    )
-    public ResponseEntity<String> rest_subscribeEvent(
-        @RequestHeader("x-pushr-access-token") String accessToken, // if not present: result is 400 - Bad Request
-        @RequestParam(name="trigger") String trigger
-    ) {
-        PushrApplication.logger.info("++ api/event/subscribe_event");
-        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
-        if (userId == null) {
-            return new ResponseEntity<>(
-                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
-                HttpStatus.UNAUTHORIZED
-            );
-        }
-
-        User user = accessTokenRepository.findUserByToken(accessToken); // .findByAccessToken_Token(accessToken).get(0);
-
-        Event event = eventRepository.findByTrigger(trigger).get(0);
-
-
-
-        // todo fill user2event
-
-        PushrApplication.logger.info("Subscribed to Event {} successfully", event.getEventId());
-
-
-        PushrApplication.logger.info("++ api/event/subscribe_event done");
-        return new ResponseEntity<>(
-            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS, "Subscribed to event ").getJSON(),
-            HttpStatus.CREATED
-        );
-    }
-
-    @RequestMapping(
         method = RequestMethod.GET,
         path = "/get_all_events",
         produces = "application/json"
@@ -282,7 +260,8 @@ public class EventController {
         StringBuffer result = new StringBuffer();
         result.append("[");
         for (Event event : events_owned) {
-            result.append(event.toJson(true, true)); // todo check if user is subscribed to this events
+            boolean subscribed = this.subscriptionRepository.existsSubscriptionByUserIdAndEventId(userId, event.getEventId());
+            result.append(event.toJson(true, subscribed)); // todo check if user is subscribed to this events
             result.append(",");
         }
         if (events_owned.size() > 0) {
@@ -405,6 +384,65 @@ public class EventController {
         PushrApplication.logger.info("++ api/event/can_i_subscribe_to_this_event done");
         return new ResponseEntity<>(
             new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, result + "").getJSON(),
+            HttpStatus.OK
+        );
+    }
+
+    @Transactional
+    @RequestMapping(
+        method = RequestMethod.POST,
+        path = "/subscribe_unsubscribe_to_event",
+        produces = "application/json"
+    )
+    public ResponseEntity<String> rest_subscribeUnsubscribeToEvent(
+        @RequestHeader("x-pushr-access-token") String accessToken,
+        @RequestParam(name="event_id") Long eventId,
+        @RequestParam(name="subscribe") boolean subscribe
+    ) {
+        PushrApplication.logger.info("++ api/event/subscribe_unsubscribe_to_event");
+        Long userId = controllerUtil.getUserIdFromTokenValidation(accessToken);
+        if (userId == null) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No 'x-pushr-access-token' in header or unknown token").getJSON(),
+                HttpStatus.UNAUTHORIZED
+            );
+        }
+
+        // todo check event_permission
+
+        Event event;
+        Optional<Event> optionalEvent = eventRepository.findById(eventId);
+        if (!optionalEvent.isPresent()) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "No event found by the given eventId").getJSON(),
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        event = optionalEvent.get();
+        if (event.getUserId() != userId) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "This user is not allowed to modify the given event").getJSON(),
+                HttpStatus.UNAUTHORIZED
+            );
+        }
+
+        boolean success = controllerUtil.subscribeUnsubscribeToEvent(subscribe, userId, eventId);
+
+        if (!success) {
+            return new ResponseEntity<>(
+                new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR,
+                    "Error during " + (subscribe ? " subscribe" : " unsubscribed")
+                ).getJSON(),
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        PushrApplication.logger.info("++ api/event/subscribe_unsubscribe_to_event done");
+        return new ResponseEntity<>(
+            new PushrHTTPresult(PushrHTTPresult.STATUS_SUCCESS,
+                (subscribe ? "Subscribed to" : "Unsubscribed from") + " event"
+            ).getJSON(),
             HttpStatus.OK
         );
     }

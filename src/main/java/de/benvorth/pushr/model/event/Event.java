@@ -44,13 +44,12 @@ public class Event {
 
     public String toJson () {
         return "{" +
-            "\"event_id\":" + this.getEventId() + "," +
-            "\"user_id\":" + this.getUserId() + "," +
+            "\"eventId\":" + this.getEventId() + "," +
             "\"name\":\"" + this.getName() + "\"," +
             "\"created\":" + this.getCreated() + "," +
-            "\"last_triggered\":" + this.getLastTriggered() + "," +
+            "\"lastTriggered\":" + this.getLastTriggered() + "," +
             "\"trigger\":\"" + this.getTrigger() + "\"," +
-            "\"trigger_active\":" + this.getTriggerActive() + "" +
+            "\"triggerActive\":" + this.getTriggerActive() + "" +
         "}";
     }
 
