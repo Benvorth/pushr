@@ -10,7 +10,7 @@ import java.util.List;
 public interface EventRepository extends CrudRepository<Event, Long> {
 
     List<Event> findByTrigger(String trigger);
-    List<Event> findByUserId(Long userId);
-    List<Event> findByTriggerAndUserId(String trigger, Long userId);
+    List<Event> findByUserIdOwner(Long userIdOwner);
+    List<Event> findByTriggerAndUserIdOwner(String trigger, Long userIdOwner);
 }
 

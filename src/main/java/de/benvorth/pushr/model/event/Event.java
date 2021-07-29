@@ -18,7 +18,7 @@ public class Event {
     @Column(name = "event_id")
     private Long eventId;
 
-    private Long userId;
+    private Long userIdOwner;
 
     private String  name;
     private long created;
@@ -33,9 +33,9 @@ public class Event {
     private User user;
      */
 
-    public Event(String name, long userId, long created, String trigger, Boolean triggerActive) {
+    public Event(String name, long userIdOwner, long created, String trigger, Boolean triggerActive) {
         this.name = name;
-        this.userId = userId;
+        this.userIdOwner = userIdOwner;
         this.created = created;
         this.lastTriggered = -1;
         this.trigger = trigger;
@@ -45,6 +45,7 @@ public class Event {
     public String toJson () {
         return "{" +
             "\"eventId\":" + this.getEventId() + "," +
+            // "\"userIdOwner\":" + this.getUserIdOwner() + "," +
             "\"name\":\"" + this.getName() + "\"," +
             "\"created\":" + this.getCreated() + "," +
             "\"lastTriggered\":" + this.getLastTriggered() + "," +
@@ -56,6 +57,7 @@ public class Event {
     public String toJson (boolean owned, boolean subscribed) {
         return "{" +
             "\"eventId\":" + this.getEventId() + "," +
+            // "\"userIdOwner\":" + this.getUserIdOwner() + "," +
             "\"name\":\"" + this.getName() + "\"," +
             "\"created\":" + this.getCreated() + "," +
             "\"lastTriggered\":" + this.getLastTriggered() + "," +

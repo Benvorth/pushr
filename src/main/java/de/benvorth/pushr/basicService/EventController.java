@@ -5,7 +5,6 @@ import de.benvorth.pushr.model.PushrHTTPresult;
 import de.benvorth.pushr.model.device.DeviceRespository;
 import de.benvorth.pushr.model.event.Event;
 import de.benvorth.pushr.model.event.EventRepository;
-import de.benvorth.pushr.model.subscription.Subscription;
 import de.benvorth.pushr.model.subscription.SubscriptionRepository;
 import de.benvorth.pushr.model.user.AccessTokenRepository;
 import de.benvorth.pushr.model.user.User;
@@ -149,7 +148,7 @@ public class EventController {
                 );
             } else {
                 newEvent = optionalEvent.get();
-                if (newEvent.getUserId() != userId) {
+                if (newEvent.getUserIdOwner() != userId) {
                     return new ResponseEntity<>(
                         new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "This user is not allowed to modify the given event").getJSON(),
                         HttpStatus.UNAUTHORIZED
@@ -170,7 +169,7 @@ public class EventController {
         }
 
         // handle subscription of user to event
-        controllerUtil.subscribeUnsubscribeToEvent(subscribe, userId, eventId);
+        controllerUtil.subscribeUnsubscribeToEvent(subscribe, userId, newEvent.getEventId());
 
         PushrApplication.logger.info("++ api/event/save_event done");
         return new ResponseEntity<>(
@@ -211,7 +210,7 @@ public class EventController {
         }
 
         Event event = eventOptional.get();
-        if (event.getUserId() != userId) {
+        if (event.getUserIdOwner() != userId) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR,
                     "This user may not delete this event").getJSON(),
@@ -252,7 +251,7 @@ public class EventController {
         }
 
         // owned events
-        List<Event> events_owned = eventRepository.findByUserId(userId);
+        List<Event> events_owned = eventRepository.findByUserIdOwner(userId);
         PushrApplication.logger.info("Found {} events owned by this user", events_owned.size());
 
         // todo get events_subscribed
@@ -420,7 +419,7 @@ public class EventController {
         }
 
         event = optionalEvent.get();
-        if (event.getUserId() != userId) {
+        if (event.getUserIdOwner() != userId) {
             return new ResponseEntity<>(
                 new PushrHTTPresult(PushrHTTPresult.STATUS_ERROR, "This user is not allowed to modify the given event").getJSON(),
                 HttpStatus.UNAUTHORIZED

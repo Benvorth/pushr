@@ -193,7 +193,7 @@ public class PushMsgController {
 
         // todo: check permissions to trigger this event
 
-        List<Device> devices = deviceRespository.findByUserId(event.getUserId());
+        List<Device> devices = deviceRespository.findByUserId(event.getUserIdOwner());
         for (Device device : devices) {
             PushMessage msg = new PushMessage();
             msg.setTitle("Text Notification");

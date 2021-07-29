@@ -39,6 +39,7 @@ public class PublicEventGenerator {
 
     // check every ten mins on a new xkcd comic
     @Scheduled(fixedDelay = 600_000, initialDelay = 60_000)
+    // @Scheduled(fixedDelay = 10_000, initialDelay = 60_000)
     public void newXkcdComic() {
         // https://xkcd.com/info.0.json
         // {"month": "6", "num": 2479, "link": "", "year": "2021", "news": "",
@@ -58,6 +59,7 @@ public class PublicEventGenerator {
                 e.printStackTrace();
             }
             int comicNum = (int)(xkcdJson.get("num"));
+            // if (true || lastXkcdNum < comicNum) { // a new one!
             if (lastXkcdNum < comicNum) { // a new one!
                 lastXkcdNum = comicNum;
 
