@@ -40,27 +40,33 @@ pipeline {
 
         stage('Clone the backend') {
             steps {
-                git branch: 'main', url: 'https://github.com/Benvorth/pushr.git'
+                dir('pushr') {
+                    git branch: 'main', url: 'https://github.com/Benvorth/pushr.git'
+                }
             }
         }
 
         stage('Merge frontend and backend') {
             steps {
-                sh 'cp -rf pushr-fe/build src/main/resources/static'
+                dir('pushr') {
+                    sh 'cp -rf ../pushr-fe/build src/main/resources/static'
+                }
             }
         }
 
         stage("Build the backend") {
             steps {
-                sh 'mvn clean install -DskipTests'
+                dir('pushr') {
+                    sh 'mvn clean install -DskipTests'
+                }
             }
         }
 
         stage("Deploy new version") {
             steps {
-
-                sh 'nohup mvn -Dspring.profiles.active=prod -Dserver.port=8081 spring-boot:run &'
-
+                dir('pushr') {
+                    sh 'nohup mvn -Dspring.profiles.active=prod -Dserver.port=8081 spring-boot:run &'
+                }
             }
         }
     }
